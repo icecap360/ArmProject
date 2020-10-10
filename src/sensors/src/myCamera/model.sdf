@@ -1,0 +1,75 @@
+<?xml version = "1.0"?>
+<sdf version= "1.4">
+<model name = "camera">
+	<static>true</static>
+	<link name="outerframe">
+		<pose> 0 0 0 0 0 0 </pose>
+
+		<collision name="collisionBox">
+			<geometry>
+			<box><size>0.1 0.04 0.1</size></box>
+			</geometry>		
+		</collision>
+		<visual name="visualBox">
+			<geometry>
+			<box><size>0.1 0.04 0.1</size></box>
+			</geometry>		
+		</visual>
+
+		<collision name="collisionLense">
+			<pose>0.0 0.02 0.03 1.5707963 0 0</pose>
+			<geometry>
+			<cylinder>
+				<radius>0.02</radius>
+				<length>0.02</length>
+			</cylinder>
+			</geometry>		
+		</collision>
+		<visual name="visualLense">
+			<pose>0.0 0.02 0.03 1.5707963 0 0</pose>
+			<geometry>
+			<cylinder>
+				<radius>0.02</radius>
+				<length>0.02</length>
+			</cylinder>
+			</geometry>			
+		</visual>
+		<sensor name="Camera" type="camera">
+			<pose>0 0 0.03 0 0 1.57</pose>
+			<update_rate>50</update_rate>
+			<always_on>true</always_on>
+			<visualize>true</visualize>
+			<camera>
+				<horizontal_fov>1.047</horizontal_fov>
+				<image>
+					<height>786</height>
+					<width>786</width>
+				</image>
+				<!--<save enabled=True>
+					<path>"~/CameraData"</path>
+				</save>-->
+				<noise>
+				    <type>gaussian</type>
+				    <mean>0.0</mean>
+				    <stddev>0.01</stddev>
+				</noise>
+				<clip>
+				    <near>0.1</near>
+				    <far>100</far>
+				</clip>
+				<distortion>
+				   <k1>-0.25</k1>
+				   <k2>0.12</k2>
+				   <k3>0.0</k3>
+				   <p1>-0.00028</p1>
+				   <p2>-0.00005</p2>
+				   <center>0.5 0.5</center>
+				</distortion>
+			</camera>
+
+
+		</sensor>	
+	
+	</link>
+</model>
+</sdf>
