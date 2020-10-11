@@ -1,0 +1,8 @@
+prefix=/home/muhammad/armws/devel
+
+Name: Camera_gazebo
+Description: Description of Camera_gazebo
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

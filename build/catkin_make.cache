@@ -1,2 +1,2 @@
-
+Camera_description:Camera_gazebo
 -DCATKIN_DEVEL_PREFIX=/home/muhammad/armws/devel -DCMAKE_INSTALL_PREFIX=/home/muhammad/armws/install -G Unix Makefiles

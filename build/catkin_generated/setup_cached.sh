@@ -8,6 +8,8 @@
 
 # modified environment variables
 export CMAKE_PREFIX_PATH="/home/muhammad/armws/devel:$CMAKE_PREFIX_PATH"
+export LD_LIBRARY_PATH="/home/muhammad/armws/devel/lib:$LD_LIBRARY_PATH"
+export PKG_CONFIG_PATH="/home/muhammad/armws/devel/lib/pkgconfig:$PKG_CONFIG_PATH"
 export PWD='/home/muhammad/armws/build'
 export ROSLISP_PACKAGE_DIRECTORIES='/home/muhammad/armws/devel/share/common-lisp'
 export ROS_PACKAGE_PATH="/home/muhammad/armws/src:$ROS_PACKAGE_PATH"
