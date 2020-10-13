@@ -4,10 +4,12 @@
   <rosparam file="$(find ur10_control)/config/ur10_control.yaml" command="load"/>
 
   <!-- load the controllers -->
+  <!-- timeout must be increased due to gazebo load time /-->
   <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
-    output="screen" ns="/ur10" args="shoulder_pan_joint_position_controller shoulder_lift_joint_position_controller
-            elbow_joint_position_controller wrist_1_joint_position_controller wrist_2_joint_position_controller
-            wrist_3_joint_position_controller joint_state_controller"/>
+    output="screen" args="--namespace=/ur10 joint_state_controller shoulder_pan_joint_position_controller
+            shoulder_lift_joint_position_controller elbow_joint_position_controller
+            wrist_1_joint_position_controller wrist_2_joint_position_controller
+            wrist_3_joint_position_controller --timeout 60"/>
 
   <!-- convert joint states to TF transforms for rviz, etc -->
   <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"
