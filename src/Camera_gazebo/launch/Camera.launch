@@ -5,4 +5,10 @@
     <arg name="world_name" value="$(find Camera_gazebo)/worlds/Camera.world"/>
     <!-- more default parameters can be changed here -->
   </include>
+
+  <param name="robot_description" command="$(find xacro)/xacro '$(find ur10_description)/urdf/ur10_robot.urdf.xacro' " />
+
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
+    args="-file $(find ur10_description)/urdf/ur10_robot.urdf -urdf -z 1 -model ur10" />
+
 </launch>
