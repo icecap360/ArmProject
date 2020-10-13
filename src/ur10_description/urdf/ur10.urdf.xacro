@@ -338,9 +338,45 @@
     <joint name="${prefix}camera_joint" type="fixed">
       <parent link="${prefix}wrist_1_link" />
       <child link = "${prefix}camera_link" />
-      <origin xyz="-0.08 ${wrist_3_length} ${wrist_1_length}" rpy="0.0 0.0 ${pi/2.0}" />
+      <origin xyz="-0.08 ${wrist_3_length} 0" rpy="0.0 0.0 ${pi/2.0}" />
     </joint>
+	<gazebo reference = "${prefix}camera_link">
+		<sensor  type="camera" name="Camera Sensor">
+        		<origin xyz="0 0 0" rpy="0 0 0" />
+			<update_rate>50</update_rate>
+			<always_on>true</always_on>
+			<visualize>true</visualize>
+			<camera>
+				<horizontal_fov>1.047</horizontal_fov>
+				<image>
+					<height>786</height>
+					<width>786</width>
+				</image>
+				<!--<save enabled=True>
+					<path>"~/CameraData"</path>
+				</save>-->
+				<noise>
+				    <type>gaussian</type>
+				    <mean>0.0</mean>
+				    <stddev>0.01</stddev>
+				</noise>
+				<clip>
+				    <near>0.1</near>
+				    <far>100</far>
+				</clip>
+				<distortion>
+				   <k1>-0.25</k1>
+				   <k2>0.12</k2>
+				   <k3>0.0</k3>
+				   <p1>-0.00028</p1>
+				   <p2>-0.00005</p2>
+				   <center>0.5 0.5</center>
+				</distortion>
+			</camera>
 
+
+		</sensor>
+	</gazebo>
 
 
 
