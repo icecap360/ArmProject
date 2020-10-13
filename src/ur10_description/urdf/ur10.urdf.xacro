@@ -297,6 +297,55 @@
       </collision>
     </link>
 
+
+
+
+    <link name="${prefix}camera_link">
+		<!--<pose> 0 0 0 0 0 0 </pose> !-->
+		<inertial>
+		    <origin xyz="0.0 0.0 0.05" rpy="0 0 0"/>
+		    <mass value="1"/>
+		    <inertia
+			ixx="1.0" ixy="0.0" ixz="0.0"
+			iyy="1.0" iyz="0.0"
+			izz="1.0"/>
+	    	</inertial>
+		<collision name="collisionBox">
+		    	<origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+			<geometry>
+			<box size="0.1 0.03 0.05"/>
+			</geometry>		
+		</collision>
+		<visual name="visualBox">
+		    	<origin xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+			<geometry>
+			<box size="0.1 0.03 0.05"/>
+			</geometry>		
+		</visual>
+		<collision name="collisionLense">
+			<origin xyz="0.0 0.02 0.01" rpy="1.5707963 0 0" />
+			<geometry>
+				<cylinder length="0.02" radius="0.02"/>
+			</geometry>		
+		</collision>
+		<visual name="visualLense">
+			<origin xyz="0.0 0.02 0.01" rpy="1.5707963 0 0" />
+			<geometry>
+				<cylinder length="0.02" radius="0.02"/>	
+			</geometry>			
+		</visual>
+	</link>
+    <joint name="${prefix}camera_joint" type="fixed">
+      <parent link="${prefix}wrist_1_link" />
+      <child link = "${prefix}camera_link" />
+      <origin xyz="-0.08 ${wrist_3_length} ${wrist_1_length}" rpy="0.0 0.0 ${pi/2.0}" />
+    </joint>
+
+
+
+
+
+
     <xacro:ur10_arm_transmission prefix="${prefix}" />
     <xacro:ur10_arm_gazebo prefix="${prefix}" />
 
