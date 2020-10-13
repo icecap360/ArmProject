@@ -273,7 +273,7 @@
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
   </transmission>
-  <transmission name="wrist_3_trans">
+  <transmission name="wrist_3_trans">-->
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="wrist_3_joint">
       <hardwareInterface>PositionJointInterface</hardwareInterface>

@@ -6,9 +6,12 @@
     <!-- more default parameters can be changed here -->
   </include>
 
-  <param name="robot_description" command="$(find xacro)/xacro '$(find ur10_description)/urdf/ur10_robot.urdf.xacro' " />
+  <param name="robot_description"
+    command="$(find xacro)/xacro --inorder $(find ur10_description)/urdf/ur10_robot.urdf.xacro" />
 
   <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
-    args="-file $(find ur10_description)/urdf/ur10_robot.urdf -urdf -z 1 -model ur10" />
+    args="-file $(find ur10_description)/urdf/ur10_robot.urdf -urdf -model ur10" />
+
+  <include file="$(find ur10_control)/launch/ur10_control.launch" />
 
 </launch>
