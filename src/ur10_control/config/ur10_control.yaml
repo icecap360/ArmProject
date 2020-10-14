@@ -8,24 +8,24 @@ ur10:
   shoulder_pan_joint_position_controller:
     type: effort_controllers/JointPositionController
     joint: shoulder_pan_joint
-    pid: {p: 100.0, i: 0.01, d: 10.0}
+    pid: {p: 5000.0, i: 10, d: 350.0}
   shoulder_lift_joint_position_controller:
     type: effort_controllers/JointPositionController
     joint: shoulder_lift_joint
-    pid: {p: 100.0, i: 0.01, d: 10.0}
+    pid: {p: 5000.0, i: 10, d: 350.0}
   elbow_joint_position_controller:
-      type: effort_controllers/JointPositionController
-      joint: elbow_joint
-      pid: {p: 100.0, i: 0.01, d: 10.0}
+    type: effort_controllers/JointPositionController
+    joint: elbow_joint
+    pid: {p: 5000.0, i: 10, d: 350.0}
   wrist_1_joint_position_controller:
     type: effort_controllers/JointPositionController
     joint: wrist_1_joint
-    pid: {p: 100.0, i: 0.01, d: 10.0}
+    pid: {p: 5000.0, i: 10, d: 350.0}
   wrist_2_joint_position_controller:
     type: effort_controllers/JointPositionController
     joint: wrist_2_joint
-    pid: {p: 100.0, i: 0.01, d: 10.0}
+    pid: {p: 5000.0, i: 10, d: 350.0}
   wrist_3_joint_position_controller:
     type: effort_controllers/JointPositionController
     joint: wrist_3_joint
-    pid: {p: 100.0, i: 0.01, d: 10.0}
+    pid: {p: 5000.0, i: 10, d: 350.0}
