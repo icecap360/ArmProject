@@ -28,6 +28,7 @@
   Author: Kelsey Hawkins
   Contributers: Jimmy Da Silva, Ajit Krisshna N L, Muhammad Asif Rana
 -->
+  <!--xacro:property name="pi" value="3.14159265" /-->
   <!-- measured from model -->
   <link name="base_link">
     <visual>
@@ -54,7 +55,7 @@
     <child link="shoulder_link"/>
     <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.1273"/>
     <axis xyz="0 0 1"/>
-    <limit effort="330.0" lower="-6.2831853" upper="6.2831853" velocity="2.16"/>
+    <limit effort="330.0" lower="-6.28318530718" upper="6.28318530718" velocity="2.16"/>
     <dynamics damping="0.0" friction="0.0"/>
   </joint>
   <link name="shoulder_link">
@@ -80,9 +81,9 @@
   <joint name="shoulder_lift_joint" type="revolute">
     <parent link="shoulder_link"/>
     <child link="upper_arm_link"/>
-    <origin rpy="0.0 1.570796325 0.0" xyz="0.0 0.220941 0.0"/>
+    <origin rpy="0.0 1.57079632679 0.0" xyz="0.0 0.220941 0.0"/>
     <axis xyz="0 1 0"/>
-    <limit effort="330.0" lower="-6.2831853" upper="6.2831853" velocity="2.16"/>
+    <limit effort="330.0" lower="-6.28318530718" upper="6.28318530718" velocity="2.16"/>
     <dynamics damping="0.0" friction="0.0"/>
   </joint>
   <link name="upper_arm_link">
@@ -110,7 +111,7 @@
     <child link="forearm_link"/>
     <origin rpy="0.0 0.0 0.0" xyz="0.0 -0.1719 0.612"/>
     <axis xyz="0 1 0"/>
-    <limit effort="150.0" lower="-6.2831853" upper="6.2831853" velocity="3.15"/>
+    <limit effort="150.0" lower="-6.28318530718" upper="6.28318530718" velocity="3.15"/>
     <dynamics damping="0.0" friction="0.0"/>
   </joint>
   <link name="forearm_link">
@@ -136,9 +137,9 @@
   <joint name="wrist_1_joint" type="revolute">
     <parent link="forearm_link"/>
     <child link="wrist_1_link"/>
-    <origin rpy="0.0 1.570796325 0.0" xyz="0.0 0.0 0.5723"/>
+    <origin rpy="0.0 1.57079632679 0.0" xyz="0.0 0.0 0.5723"/>
     <axis xyz="0 1 0"/>
-    <limit effort="54.0" lower="-6.2831853" upper="6.2831853" velocity="3.2"/>
+    <limit effort="54.0" lower="-6.28318530718" upper="6.28318530718" velocity="3.2"/>
     <dynamics damping="0.0" friction="0.0"/>
   </joint>
   <link name="wrist_1_link">
@@ -166,7 +167,7 @@
     <child link="wrist_2_link"/>
     <origin rpy="0.0 0.0 0.0" xyz="0.0 0.1149 0.0"/>
     <axis xyz="0 0 1"/>
-    <limit effort="54.0" lower="-6.2831853" upper="6.2831853" velocity="3.2"/>
+    <limit effort="54.0" lower="-6.28318530718" upper="6.28318530718" velocity="3.2"/>
     <dynamics damping="0.0" friction="0.0"/>
   </joint>
   <link name="wrist_2_link">
@@ -194,7 +195,7 @@
     <child link="wrist_3_link"/>
     <origin rpy="0.0 0.0 0.0" xyz="0.0 0.0 0.1157"/>
     <axis xyz="0 1 0"/>
-    <limit effort="54.0" lower="-6.2831853" upper="6.2831853" velocity="3.2"/>
+    <limit effort="54.0" lower="-6.28318530718" upper="6.28318530718" velocity="3.2"/>
     <dynamics damping="0.0" friction="0.0"/>
   </joint>
   <link name="wrist_3_link">
@@ -220,10 +221,8 @@
   <joint name="ee_fixed_joint" type="fixed">
     <parent link="wrist_3_link"/>
     <child link="ee_link"/>
-    <origin rpy="0.0 0.0 1.570796325" xyz="0.0 0.0922 0.0"/>
+    <origin rpy="0.0 0.0 1.57079632679" xyz="0.0 0.0922 0.0"/>
   </joint>
-
-  <!-- camera stuff /-->
   <link name="ee_link">
     <collision>
       <geometry>
@@ -267,15 +266,15 @@
   <joint name="camera_joint" type="fixed">
     <parent link="wrist_1_link"/>
     <child link="camera_link"/>
-    <origin rpy="0.0 0.0 1.570796325" xyz="-0.08 0.0922 0"/>
+    <origin rpy="0.0 0.0 1.57079632679" xyz="-0.06 0.0922 0"/>
   </joint>
   <gazebo reference="camera_link">
     <sensor name="Camera Sensor" type="camera">
-      <origin rpy="0 0 0" xyz="0 0 0"/>
       <update_rate>50</update_rate>
       <always_on>true</always_on>
       <visualize>true</visualize>
       <camera>
+        <pose> 0.0 0.0 0.0 0.0 0.0 0.0</pose>
         <horizontal_fov>1.047</horizontal_fov>
         <image>
           <height>786</height>
@@ -302,10 +301,22 @@
           <center>0.5 0.5</center>
         </distortion>
       </camera>
+      <plugin filename="libgazebo_ros_camera.so" name="camera_controller">
+        <alwaysOn>true</alwaysOn>
+        <updateRate>0.0</updateRate>
+        <cameraName>Arm/camera</cameraName>
+        <imageTopicName>image_raw</imageTopicName>
+        <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+        <frameName>camera_link</frameName>
+        <hackBaseline>0.07</hackBaseline>
+        <distortionK1>0.0</distortionK1>
+        <distortionK2>0.0</distortionK2>
+        <distortionK3>0.0</distortionK3>
+        <distortionT1>0.0</distortionT1>
+        <distortionT2>0.0</distortionT2>
+      </plugin>
     </sensor>
   </gazebo>
-
-
   <transmission name="shoulder_pan_trans">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="shoulder_pan_joint">
@@ -366,8 +377,6 @@
       <mechanicalReduction>1</mechanicalReduction>
     </actuator>
   </transmission>
-
-  
   <!-- nothing to do here at the moment -->
   <!-- ROS base_link to UR 'Base' Coordinates transform -->
   <link name="base"/>
@@ -376,14 +385,14 @@
     not corrected wrt the real robot (ie: rotated over 180
     degrees)
     -->
-    <origin rpy="0 0 -3.14159265" xyz="0 0 0"/>
+    <origin rpy="0 0 -3.14159265359" xyz="0 0 0"/>
     <parent link="base_link"/>
     <child link="base"/>
   </joint>
   <!-- Frame coincident with all-zeros TCP on UR controller -->
   <link name="tool0"/>
   <joint name="wrist_3_link-tool0_fixed_joint" type="fixed">
-    <origin rpy="-1.570796325 0 0" xyz="0 0.0922 0"/>
+    <origin rpy="-1.57079632679 0 0" xyz="0 0.0922 0"/>
     <parent link="wrist_3_link"/>
     <child link="tool0"/>
   </joint>
