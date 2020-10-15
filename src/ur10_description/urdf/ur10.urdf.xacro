@@ -297,11 +297,20 @@
       </collision>
     </link>
 
+<!-- Notes about camera in general
+* The gazebo tag is what actually makes the sensor, it is in SDF I beleive, not URDF
+* In order to change the sensor pose or even the link pose, use the pose fixed join associated with each camera
+* Recalculate the inertia statistics if you change the mass or shape of the camera
+* There are only 3 wrist links, we have attatched the cameras to the second
+* The cylindric camera lense has been removed, it was difficult to tune the pose (rpy)
+* Watch the frameName of the camera topics, they should match the link name
+* Tune the distortions to your needs
+* This code requires uncommenting if you want to save the images somewhere
+-->
 
 
-
+<!-- DOWN FACING CAMERA -->
     <link name="${prefix}down_camera_link">
-		<!--<pose> 0 0 0 0 0 0 </pose> !-->
 		<inertial>
 		    <origin xyz="0.0 0.0 0.05" rpy="0 0 0"/>
 		    <mass value="1"/>
@@ -322,19 +331,6 @@
 			<box size="0.03 0.03 0.03"/>
 			</geometry>		
 		</visual>
-		<!--   The circular lense if commented out due to the diffuculty of tuning/finding the right rpy configurations 
-		<collision name="collisionLense">
-			<origin xyz="0.0 0.0 -0.02" rpy="0 ${pi/2.0} 0"/>
-			<geometry>
-				<cylinder length="0.02" radius="0.02"/>
-			</geometry>		
-		</collision>
-		<visual name="visualLense">
-			<origin xyz="0.0 0.0 -0.02" rpy="0 ${pi/2.0} 0"/>
-			<geometry>
-				<cylinder length="0.02" radius="0.02"/>	
-			</geometry>			
-		</visual> !-->
 	</link>
     <joint name="${prefix}down_camera_joint" type="fixed">
       <parent link="${prefix}wrist_2_link" />
@@ -392,7 +388,7 @@
 	</gazebo>
 
 
-
+<!-- RIGHT FACING CAMERA -->
 	<link name="${prefix}right_camera_link">
 		<!--<pose> 0 0 0 0 0 0 </pose> !-->
 		<inertial>
@@ -415,19 +411,6 @@
 			<box size="0.03 0.03 0.03"/>
 			</geometry>		
 		</visual>
-		<!--   The circular lense if commented out due to the diffuculty of tuning/finding the right rpy configurations 
-		<collision name="collisionLense">
-			<origin xyz="0.0 0.0 -0.02" rpy="0 ${pi/2.0} 0"/>
-			<geometry>
-				<cylinder length="0.02" radius="0.02"/>
-			</geometry>		
-		</collision>
-		<visual name="visualLense">
-			<origin xyz="0.0 0.0 -0.02" rpy="0 ${pi/2.0} 0"/>
-			<geometry>
-				<cylinder length="0.02" radius="0.02"/>	
-			</geometry>			
-		</visual> !-->
 	</link>
     <joint name="${prefix}right_camera_joint" type="fixed">
       <parent link="${prefix}wrist_2_link" />
@@ -484,7 +467,7 @@
 		</sensor>
 	</gazebo>
 
-
+<!-- END OF CODE ADDED-->
 
     <xacro:ur10_arm_transmission prefix="${prefix}" />
     <xacro:ur10_arm_gazebo prefix="${prefix}" />
