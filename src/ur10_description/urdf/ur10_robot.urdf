@@ -231,7 +231,7 @@
       <origin rpy="0 0 0" xyz="-0.01 0 0"/>
     </collision>
   </link>
-  <link name="camera_link">
+  <link name="down_camera_link">
     <!--<pose> 0 0 0 0 0 0 </pose> !-->
     <inertial>
       <origin rpy="0 0 0" xyz="0.0 0.0 0.05"/>
@@ -241,35 +241,36 @@
     <collision name="collisionBox">
       <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
       <geometry>
-        <box size="0.1 0.03 0.05"/>
+        <box size="0.03 0.03 0.03"/>
       </geometry>
     </collision>
     <visual name="visualBox">
       <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
       <geometry>
-        <box size="0.1 0.03 0.05"/>
+        <box size="0.03 0.03 0.03"/>
       </geometry>
     </visual>
-    <collision name="collisionLense">
-      <origin rpy="1.5707963 0 0" xyz="0.0 0.02 0.01"/>
-      <geometry>
-        <cylinder length="0.02" radius="0.02"/>
-      </geometry>
-    </collision>
-    <visual name="visualLense">
-      <origin rpy="1.5707963 0 0" xyz="0.0 0.02 0.01"/>
-      <geometry>
-        <cylinder length="0.02" radius="0.02"/>
-      </geometry>
-    </visual>
+    <!--   The circular lense if commented out due to the diffuculty of tuning/finding the right rpy configurations 
+		<collision name="collisionLense">
+			<origin xyz="0.0 0.0 -0.02" rpy="0 ${pi/2.0} 0"/>
+			<geometry>
+				<cylinder length="0.02" radius="0.02"/>
+			</geometry>		
+		</collision>
+		<visual name="visualLense">
+			<origin xyz="0.0 0.0 -0.02" rpy="0 ${pi/2.0} 0"/>
+			<geometry>
+				<cylinder length="0.02" radius="0.02"/>	
+			</geometry>			
+		</visual> !-->
   </link>
-  <joint name="camera_joint" type="fixed">
-    <parent link="wrist_1_link"/>
-    <child link="camera_link"/>
-    <origin rpy="0.0 0.0 1.57079632679" xyz="-0.06 0.0922 0"/>
+  <joint name="down_camera_joint" type="fixed">
+    <parent link="wrist_2_link"/>
+    <child link="down_camera_link"/>
+    <origin rpy="0.0 -1.57079632679 1.57079632679" xyz="-0.06 0.0 0.12"/>
   </joint>
-  <gazebo reference="camera_link">
-    <sensor name="Camera Sensor" type="camera">
+  <gazebo reference="down_camera_link">
+    <sensor name="Down Camera Sensor" type="camera">
       <update_rate>50</update_rate>
       <always_on>true</always_on>
       <visualize>true</visualize>
@@ -301,13 +302,100 @@
           <center>0.5 0.5</center>
         </distortion>
       </camera>
-      <plugin filename="libgazebo_ros_camera.so" name="camera_controller">
+      <plugin filename="libgazebo_ros_camera.so" name="down_camera_controller">
         <alwaysOn>true</alwaysOn>
         <updateRate>0.0</updateRate>
-        <cameraName>Arm/camera</cameraName>
+        <cameraName>Arm/down_camera</cameraName>
         <imageTopicName>image_raw</imageTopicName>
         <cameraInfoTopicName>camera_info</cameraInfoTopicName>
-        <frameName>camera_link</frameName>
+        <frameName>down_camera_link</frameName>
+        <hackBaseline>0.07</hackBaseline>
+        <distortionK1>0.0</distortionK1>
+        <distortionK2>0.0</distortionK2>
+        <distortionK3>0.0</distortionK3>
+        <distortionT1>0.0</distortionT1>
+        <distortionT2>0.0</distortionT2>
+      </plugin>
+    </sensor>
+  </gazebo>
+  <link name="right_camera_link">
+    <!--<pose> 0 0 0 0 0 0 </pose> !-->
+    <inertial>
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.05"/>
+      <mass value="1"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+    <collision name="collisionBox">
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+      <geometry>
+        <box size="0.03 0.03 0.03"/>
+      </geometry>
+    </collision>
+    <visual name="visualBox">
+      <origin rpy="0 0 0" xyz="0.0 0.0 0.0"/>
+      <geometry>
+        <box size="0.03 0.03 0.03"/>
+      </geometry>
+    </visual>
+    <!--   The circular lense if commented out due to the diffuculty of tuning/finding the right rpy configurations 
+		<collision name="collisionLense">
+			<origin xyz="0.0 0.0 -0.02" rpy="0 ${pi/2.0} 0"/>
+			<geometry>
+				<cylinder length="0.02" radius="0.02"/>
+			</geometry>		
+		</collision>
+		<visual name="visualLense">
+			<origin xyz="0.0 0.0 -0.02" rpy="0 ${pi/2.0} 0"/>
+			<geometry>
+				<cylinder length="0.02" radius="0.02"/>	
+			</geometry>			
+		</visual> !-->
+  </link>
+  <joint name="right_camera_joint" type="fixed">
+    <parent link="wrist_2_link"/>
+    <child link="right_camera_link"/>
+    <origin rpy="0.0 0.0 1.57079632679" xyz="-0.06 0.0 0.08"/>
+  </joint>
+  <gazebo reference="right_camera_link">
+    <sensor name="Right Camera Sensor" type="camera">
+      <update_rate>50</update_rate>
+      <always_on>true</always_on>
+      <visualize>true</visualize>
+      <camera>
+        <pose> 0.0 0.0 0.0 0.0 0.0 0.0</pose>
+        <horizontal_fov>1.047</horizontal_fov>
+        <image>
+          <height>786</height>
+          <width>786</width>
+        </image>
+        <!--<save enabled=True>
+					<path>"~/CameraData"</path>
+				</save>-->
+        <noise>
+          <type>gaussian</type>
+          <mean>0.0</mean>
+          <stddev>0.01</stddev>
+        </noise>
+        <clip>
+          <near>0.1</near>
+          <far>100</far>
+        </clip>
+        <distortion>
+          <k1>-0.25</k1>
+          <k2>0.12</k2>
+          <k3>0.0</k3>
+          <p1>-0.00028</p1>
+          <p2>-0.00005</p2>
+          <center>0.5 0.5</center>
+        </distortion>
+      </camera>
+      <plugin filename="libgazebo_ros_camera.so" name="right_camera_controller">
+        <alwaysOn>true</alwaysOn>
+        <updateRate>0.0</updateRate>
+        <cameraName>Arm/right_camera</cameraName>
+        <imageTopicName>image_raw</imageTopicName>
+        <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+        <frameName>right_camera_link</frameName>
         <hackBaseline>0.07</hackBaseline>
         <distortionK1>0.0</distortionK1>
         <distortionK2>0.0</distortionK2>
