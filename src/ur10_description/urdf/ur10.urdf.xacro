@@ -298,6 +298,7 @@
     </link>
 
 <!-- Notes about camera in general
+* What we currently do not have is depth camera, if in the future we need one, simply copy the code from any camera, rename links (replace "down" for example with something else) and to change the pose, use only the joint pose (the cameras are cubic so this should be a quick adjustment)
 * The gazebo tag is what actually makes the sensor, it is in SDF I beleive, not URDF
 * In order to change the sensor pose or even the link pose, use the pose fixed join associated with each camera
 * Recalculate the inertia statistics if you change the mass or shape of the camera
