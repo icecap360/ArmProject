@@ -1,5 +1,7 @@
 controller_list:
-  - name: fake_manipulator_controller
+  - name: ""
+    action_ns: follow_joint_trajectory
+    type: FollowJointTrajectory
     joints:
       - shoulder_pan_joint
       - shoulder_lift_joint
@@ -7,6 +9,3 @@ controller_list:
       - wrist_1_joint
       - wrist_2_joint
       - wrist_3_joint
-  - name: fake_endeffector_controller
-    joints:
-      []
