@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import rospy
-from std_msgs.msg import String
+from control.msg import desired_classes
 
 def callback(data):
-    rospy.loginfo(rospy.get_caller_id() + 'I heard %s', data.data)
+    rospy.loginfo(rospy.get_caller_id() + 'I heard %s', data)
 
 def listener():
 
@@ -15,7 +15,7 @@ def listener():
     # run simultaneously.
     rospy.init_node('listener', anonymous=True)
 
-    rospy.Subscriber('class_list', String, callback)
+    rospy.Subscriber('class_list', desired_classes, callback)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
