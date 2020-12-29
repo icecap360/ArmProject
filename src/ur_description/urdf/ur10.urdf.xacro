@@ -309,9 +309,9 @@
     </link>
 
     <joint name="${prefix}depth_camera_joint" type="fixed">
-      <parent link="${prefix}wrist_2_link" />
+      <parent link="${prefix}gripper_link" />
       <child link = "${prefix}depth_camera_link" />
-      <origin xyz="-0.06 0.0 0.12" rpy="0.0 ${-pi/2.0} ${pi/2.0}" />
+      <origin xyz="0.0 -0.0151 0.0" rpy="0.0 0.0 0.0" />
     </joint>
 
     <gazebo reference = "${prefix}depth_camera_link">
