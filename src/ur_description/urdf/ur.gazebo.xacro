@@ -24,6 +24,9 @@
     <gazebo reference="${prefix}ee_link">
       <selfCollide>true</selfCollide>
     </gazebo>
+    <gazebo reference="${prefix}gripper_link">
+      <selfCollide>true</selfCollide>
+    </gazebo>
 
   </xacro:macro>
 

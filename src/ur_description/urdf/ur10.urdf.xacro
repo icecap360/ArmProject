@@ -38,6 +38,7 @@
     <xacro:property name="wrist_1_mass" value="1.96" />
     <xacro:property name="wrist_2_mass" value="1.96" />
     <xacro:property name="wrist_3_mass" value="0.202" />
+    <xacro:property name="gripper_mass" value="1.00" />
 
     <!-- These parameters are borrowed from the urcontrol.conf file
         but are not verified for the correct permutation.
@@ -338,6 +339,31 @@
         </geometry>
         <origin rpy="0 0 0" xyz="-0.01 0 0"/>
       </collision>
+    </link>
+
+    <joint name="${prefix}gripper_fixed_joint" type="fixed">
+      <parent link="${prefix}ee_link" />
+      <child link = "${prefix}gripper_link" />
+      <origin xyz="0.0 -0.05 0.1" rpy="0.0 ${pi/2.0} 0.0" />
+    </joint>
+
+    <link name="${prefix}gripper_link">
+      <visual>
+        <geometry>
+          <mesh filename="package://ur_description/meshes/ur10/visual/gripper.dae"/>
+        </geometry>
+        <material name="LightGrey">
+          <color rgba="0.7 0.7 0.7 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <mesh filename="package://ur_description/meshes/ur10/collision/gripper.stl"/>
+        </geometry>
+      </collision>
+      <xacro:cylinder_inertial radius="0.1" length="0.07" mass="${gripper_mass}">
+        <origin xyz="0.0 -0.05 0.1" rpy="0.0 ${pi/2.0} 0.0" />
+      </xacro:cylinder_inertial>
     </link>
 
     <xacro:ur_arm_transmission prefix="${prefix}" hw_interface="${transmission_hw_interface}" />
