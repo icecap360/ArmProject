@@ -5,12 +5,6 @@ class abstract_state(ABC):
 	@abstractmethod
 	def entry(self):
 		pass
-	@abstractmethod
-	def during(self):
-		pass
-	@abstractmethod
-	def exit(self):
-		pass
 
 
 class STATE1(abstract_state):
@@ -25,10 +19,6 @@ state1 = STATE1()
 class STATE2(abstract_state):
 	def entry(self):
 		print('Entering STATE2')
-	def during(self):
-		print('In STATE2')
-	def exit(self):
-		print('Exiting STATE2')
 state2 = STATE2()
 
 class STATE3(abstract_state):
@@ -36,10 +26,28 @@ class STATE3(abstract_state):
 		print('Entering STATE3')
 	def during(self):
 		print('In STATE3')
-	def exit(self):
-		print('Exiting STATE3')
 state3 = STATE3()
 
+"""
+class abstract_transition(ABC):
+    @property
+    self.next_state
+    @abstractmethod
+    def condition():
+        pass
+class transition1(abstract_transition):
+    self.next_state = state2
+    def condition():
+        return True
+class transition2(abstract_transition):
+    self.next_state = state3
+    def condition():
+        return True
+class transition3(abstract_transition):
+    self.next_state = state1
+    def condition():
+        return True
+"""
 def alwaysTrue():
 	return True
 
@@ -57,10 +65,12 @@ while(1):
 	for t in transitions:
 		transition_condition = t[0]
 		next_state = t[1]
-		if (transition_condition()):
-			currentState.exit()
+		if transition_condition():
+			if hasattr(currentState, 'exit'):
+				currentState.exit()
 			next_state.entry()
 			currentState = next_state
 			break
 	else:
-		currentState.during()
+		if hasattr(currentState, 'during'):
+			currentState.during()
