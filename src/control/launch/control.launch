@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+<launch>
+
+  <!--
+  syntax:
+    <node pkg="package name" type="exe name" name="name of node"/>
+    optional arguments:
+      respawn="whether to respawn after being closed"
+      required="whether closure of node results in closure of all nodes in launch file or not"
+      output="screen" used for print statements into terminal
+      launch-prefix="gnome-terminal - -command" used to start node in new terminal
+  -->
+  
+  <!--node pkg="control" type="main.py" name="main" required="true"/-->
+  <!-- user_interface should be opened in new terminal to make cleaner ui-->
+  <node pkg="control" type="user_interface.py" name="desired_classes"
+    required="false" output="screen" launch-prefix="gnome-terminal --command"/>
+  <!--node pkg="control" type="control_fsm.py" name="control_fsm" respawn="true"/-->
+  <!-- example client -->
+  <node pkg="control" type="client_ex.py" name="client_ex"
+    required="false" output="screen" launch-prefix="gnome-terminal --command"/>
+
+
+</launch>
