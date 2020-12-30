@@ -6,7 +6,7 @@ class abstract_state(ABC):
 	def entry(self):
 		pass
 
-
+""""DEFINITIONS OF THE STATES STARTS HERE"""
 class STATE1(abstract_state):
 	def entry(self):
 		print('Entering STATE1')
@@ -28,35 +28,22 @@ class STATE3(abstract_state):
 		print('In STATE3')
 state3 = STATE3()
 
-"""
-class abstract_transition(ABC):
-    @property
-    self.next_state
-    @abstractmethod
-    def condition():
-        pass
-class transition1(abstract_transition):
-    self.next_state = state2
-    def condition():
-        return True
-class transition2(abstract_transition):
-    self.next_state = state3
-    def condition():
-        return True
-class transition3(abstract_transition):
-    self.next_state = state1
-    def condition():
-        return True
-"""
+""""DEFINITIONS OF THE TRANSITION CONDITIONS STARTS HERE"""
+
 def alwaysTrue():
 	return True
 
+"""THE LOGIC OF THE STATEFLOW STARTS HERE
+THE FINITE STATE MACHINE IS AN ADJACENCY LIST.
+IT IS IMPLEMENTED AS A DICTIONARY FROM STATE TO LIST OF TUPLES (TRANSITION_CONDITION, TRANSITION_END_STATE)
+"""
 finite_state_machine = {
 	state1 : [(alwaysTrue,state2)],
 	state2 : [(alwaysTrue,state3)],
 	state3 : [(alwaysTrue,state1)],
 }
 
+""" MAIN MODULE STARTS HERE """
 initState = state1
 currentState = initState
 while(1):
