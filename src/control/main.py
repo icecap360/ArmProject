@@ -1,12 +1,12 @@
-from control_fsm import state1, finite_state_machine
+from control_fsm import neutral_pose, finite_state_machine
 import time
-#print(dir(control_fsm))
-""" MAIN MODULE STARTS HERE """
-initState = state1
+
+initState = neutral_pose
 currentState = initState
+currentState.entry()
 while(1):
 	transitions = finite_state_machine[currentState]
-	time.sleep(3)
+	time.sleep(2.5)
 	for t in transitions:
 		if t.condition():
 			if hasattr(currentState, 'exit'):
