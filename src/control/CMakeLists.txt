@@ -50,6 +50,7 @@ catkin_python_setup()
 add_message_files(
  FILES
  class_list.msg
+ classifier_list.msg
 )
 
 ## Generate services in the 'srv' folder
