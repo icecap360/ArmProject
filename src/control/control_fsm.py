@@ -1,17 +1,23 @@
 from abc import ABCMeta, abstractmethod 
 import rospy
-from control.srv import isGo
-
+from control.srv import isGo, isFieldAnalyzed
 import time
 class SERVICES:
+	#Must initialize services object (in main) before any of the 
+	#transitions (which depend on the services) are called.
 	def initialize(self):
 		rospy.wait_for_service('is_go')
 		self.is_go = rospy.ServiceProxy('is_go', isGo)
+		rospy.wait_for_service('is_field_analyzed')
+		self.is_field_analyzed = rospy.ServiceProxy('is_field_analyzed', isFieldAnalyzed)
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
+	# Defining all services getters
 	def call_is_go(self):
 		return self.is_go()
+	def call_is_field_analyzed(self):
+		return self.is_field_analyzed()
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -33,14 +39,15 @@ class NEUTRAL_POSE(abstract_state):
 	def entry(self):
 		print('Arm Ready')
 	def during(self):
-		print('Waiting for user GO signal')
+		print('Holding robot constant')
 	def exit(self):
-		print('Go signal Received')
+		print('Go signaled, starting')
 neutral_pose = NEUTRAL_POSE()
 
 class LOCATE_OBJECT(abstract_state):
 	def entry(self):
 		print('Analysing the current field of objects')
+		services.call_is_field_analyzed()
 	def exit(self):
 		print('Analyses done')
 locate_object = LOCATE_OBJECT()
@@ -55,7 +62,7 @@ set_desired_object = SET_DESIRED_OBJECT()
 class is_go(abstract_transition):
 	def condition(self):
 		return services.call_is_go()
-class transition2(abstract_transition):
+class default(abstract_transition):
 	def condition(self):
 		return True
 class transition3(abstract_transition):
@@ -67,6 +74,6 @@ THE FINITE STATE MACHINE IS AN ADJACENCY LIST.
 """
 finite_state_machine = {
 	neutral_pose : [is_go(locate_object)],
-	locate_object : [transition2(set_desired_object)],
-	set_desired_object : [transition3(neutral_pose)],
+	locate_object : [default(set_desired_object)],
+	set_desired_object : [default(neutral_pose)],
 }
