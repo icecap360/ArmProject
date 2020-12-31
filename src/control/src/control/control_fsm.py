@@ -1,11 +1,14 @@
 from abc import ABCMeta, abstractmethod 
 import rospy
-from control.srv import isGo, isFieldAnalyzed
+from control.srv import isGo, isFieldAnalyzed, isMoveComplete
 import time
 
 """HELPERS"""
 def fail_error(mssg):
-	return 'FAIL:'+mssg+', ABORTING'
+	fail = 'FAIL:'+mssg+', ABORTING'
+	print(fail)
+	rospy.signal_shutdown(fail)
+
 
 """SERVICES DECLARATION AND INITIALIZATION"""
 class SERVICES:
@@ -16,6 +19,8 @@ class SERVICES:
 		self.is_go = rospy.ServiceProxy('is_go', isGo)
 		rospy.wait_for_service('is_field_analyzed')
 		self.is_field_analyzed = rospy.ServiceProxy('is_field_analyzed', isFieldAnalyzed)
+		rospy.wait_for_service('is_field_analyzed')
+		self.lateral_move = rospy.ServiceProxy('lateral_move', isMoveComplete)		
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
@@ -24,6 +29,8 @@ class SERVICES:
 		return self.is_go()
 	def call_is_field_analyzed(self):
 		return self.is_field_analyzed()
+	def call_lateral_move(self):
+		return self.lateral_move()
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -55,10 +62,8 @@ class LOCATE_OBJECT(abstract_state):
 		print('Analysing the current field of objects')
 		success = services.call_is_field_analyzed().is_field_analyzed
 		if not success:
-			fail_msg = 'The arm was unable to analyze the field'
-			print(fail_error(fail_msg))
-			rospy.signal_shutdown(fail_error(fail_msg))
-
+			fail_msg = 'The arm was unable analyze the field'
+			fail_error(fail_msg)
 	def exit(self):
 		print('Analyses done')
 locate_object = LOCATE_OBJECT()
@@ -67,6 +72,15 @@ class SET_DESIRED_OBJECT(abstract_state):
 	def entry(self):
 		print('Choosing the next desired object')
 set_desired_object = SET_DESIRED_OBJECT()
+
+class LATERAL_MOVE(abstract_state):
+	def entry(self):
+		print('Starting lateral move')
+		success = services.call_lateral_move().is_move_complete
+		if not success:
+			fail_msg = 'The arm was unable to move laterally to the top of the desired object'
+			fail_error(fail_msg)
+lateral_move = LATERAL_MOVE()
 
 """"TRANSITION DEFINITIONS"""
 	
@@ -86,5 +100,6 @@ THE FINITE STATE MACHINE IS AN ADJACENCY LIST.
 finite_state_machine = {
 	neutral_pose : [is_go(locate_object)],
 	locate_object : [default(set_desired_object)],
-	set_desired_object : [default(neutral_pose)],
+	set_desired_object : [default(lateral_move)],
+	lateral_move : [default(neutral_pose)]
 }
