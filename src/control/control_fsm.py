@@ -2,6 +2,12 @@ from abc import ABCMeta, abstractmethod
 import rospy
 from control.srv import isGo, isFieldAnalyzed
 import time
+
+"""HELPERS"""
+def fail_error(mssg):
+	return 'FAIL:'+mssg+', ABORTING'
+
+"""SERVICES DECLARATION AND INITIALIZATION"""
 class SERVICES:
 	#Must initialize services object (in main) before any of the 
 	#transitions (which depend on the services) are called.
@@ -47,7 +53,12 @@ neutral_pose = NEUTRAL_POSE()
 class LOCATE_OBJECT(abstract_state):
 	def entry(self):
 		print('Analysing the current field of objects')
-		services.call_is_field_analyzed()
+		success = services.call_is_field_analyzed().is_field_analyzed
+		if not success:
+			fail_msg = 'The arm was unable to analyze the field'
+			print(fail_error(fail_msg))
+			rospy.signal_shutdown(fail_error(fail_msg))
+
 	def exit(self):
 		print('Analyses done')
 locate_object = LOCATE_OBJECT()
