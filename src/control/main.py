@@ -1,10 +1,16 @@
-from control_fsm import neutral_pose, finite_state_machine
-import time
+#! /usr/bin/env python
 
+from control_fsm import neutral_pose, finite_state_machine, services
+import rospy 
+import time
+rospy.init_node('Main')
+services.initialize()
 initState = neutral_pose
 currentState = initState
 currentState.entry()
 while(1):
+	if rospy.is_shutdown():
+		break
 	transitions = finite_state_machine[currentState]
 	time.sleep(2.5)
 	for t in transitions:

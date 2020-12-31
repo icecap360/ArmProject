@@ -1,12 +1,27 @@
-from abc import ABC, abstractmethod 
+from abc import ABCMeta, abstractmethod 
+import rospy
+from control.srv import isGo
+
 import time
+class SERVICES:
+	def initialize(self):
+		rospy.wait_for_service('is_go')
+		self.is_go = rospy.ServiceProxy('is_go', isGo)
+		self.initialize_complete()
+	def initialize_complete(self):
+		print('All services Setup')
+	def call_is_go(self):
+		return self.is_go()
+services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
-class abstract_state(ABC):
+class abstract_state:
+	__metaclass__ = ABCMeta
 	@abstractmethod
 	def entry(self):
 		pass
-class abstract_transition(ABC):
+class abstract_transition:
+	__metaclass__ = ABCMeta
 	def __init__(self, next_state):
 		self.next_state = next_state
 	@abstractmethod
@@ -37,9 +52,9 @@ set_desired_object = SET_DESIRED_OBJECT()
 
 """"TRANSITION DEFINITIONS"""
 	
-class transition1(abstract_transition):
+class is_go(abstract_transition):
 	def condition(self):
-		return True
+		return services.call_is_go()
 class transition2(abstract_transition):
 	def condition(self):
 		return True
@@ -51,7 +66,7 @@ class transition3(abstract_transition):
 THE FINITE STATE MACHINE IS AN ADJACENCY LIST.
 """
 finite_state_machine = {
-	neutral_pose : [transition1(locate_object)],
+	neutral_pose : [is_go(locate_object)],
 	locate_object : [transition2(set_desired_object)],
 	set_desired_object : [transition3(neutral_pose)],
 }
