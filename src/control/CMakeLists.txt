@@ -59,6 +59,7 @@ add_service_files(
  isGo.srv
  isFieldAnalyzed.srv
  isMoveComplete.srv
+ setTaskComplete.srv
 )
 
 ## Generate actions in the 'action' folder
