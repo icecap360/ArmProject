@@ -3,7 +3,7 @@
 import rospy
 from control.srv import isFieldAnalyzed, isFieldAnalyzedResponse
 
-def analyze():
+def analyze(req):
 	print('Searching field for what objects are present and where in the field')
 	return True
 
