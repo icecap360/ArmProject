@@ -1,6 +1,10 @@
 #! /usr/bin/env python
 
-from control_fsm import neutral_pose, finite_state_machine, services
+from control_fsm import (
+	neutral_pose, finite_state_machine, 
+	services, has_exit_commands,
+	has_during_commands
+)
 import rospy 
 import time
 rospy.init_node('Main')
@@ -15,11 +19,11 @@ while(1):
 	time.sleep(1)
 	for t in transitions:
 		if t.condition():
-			if hasattr(currentState, 'exit'):
+			if has_exit_commands(currentState):
 				currentState.exit()
 			t.next_state.entry()
 			currentState = t.next_state
 			break
 	else:
-		if hasattr(currentState, 'during'):
+		if has_during_commands(currentState):
 			currentState.during()

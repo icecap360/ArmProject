@@ -10,7 +10,10 @@ def fail_error(mssg):
 	fail = 'FAIL:'+mssg+', ABORTING'
 	print(fail)
 	rospy.signal_shutdown(fail)
-
+def has_exit_commands(currentState):
+	return hasattr(currentState, 'exit')
+def has_during_commands(currentState):
+	return hasattr(currentState, 'during')
 
 """SERVICES DECLARATION AND INITIALIZATION"""
 class SERVICES:
