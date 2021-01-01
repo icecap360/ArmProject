@@ -6,7 +6,7 @@ from control.srv import (
     setTaskComplete,
     setTaskCompleteResponse,
     setObject
-    )
+)
 from control.msg import classifier_list
 
 class classifier:
