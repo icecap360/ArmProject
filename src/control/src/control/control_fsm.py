@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 import rospy
 import actionlib
 from control.msg import ensureIsOnTopGoal, ensureIsOnTopAction
-from control.srv import isGo, isFieldAnalyzed, isMoveComplete, setTaskComplete
+from control.srv import isGo, isFieldAnalyzed, isMoveComplete, setTaskComplete, setObject
 import time
 
 """HELPERS"""
@@ -21,11 +21,12 @@ class SERVICES:
 		self.is_go = rospy.ServiceProxy('is_go', isGo)
 		rospy.wait_for_service('is_field_analyzed')
 		self.is_field_analyzed = rospy.ServiceProxy('is_field_analyzed', isFieldAnalyzed)
-		# change
 		rospy.wait_for_service('lateral_move')
 		self.lateral_move = rospy.ServiceProxy('lateral_move', isMoveComplete)
 		rospy.wait_for_service('set_task_complete')
 		self.set_task_complete = rospy.ServiceProxy('set_task_complete', setTaskComplete)
+		rospy.wait_for_service('set_object')
+		self.set_object = rospy.ServiceProxy('set_object', setObject)
 		self.ensure_is_on_top = actionlib.SimpleActionClient('ensure_is_on_top', ensureIsOnTopAction)
 		self.ensure_is_on_top.wait_for_server()
 
@@ -41,6 +42,8 @@ class SERVICES:
 		return self.lateral_move()
 	def call_set_task_complete(self):
 		return self.set_task_complete()
+	def call_set_object(self):
+		return self.set_object()
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -72,7 +75,7 @@ class LOCATE_OBJECT(abstract_state):
 		print('Analysing the current field of objects')
 		success = services.call_is_field_analyzed().is_field_analyzed
 		if not success:
-			fail_msg = 'The arm was unable analyze the field'
+			fail_msg = 'The arm was unable to analyze the field'
 			fail_error(fail_msg)
 	def exit(self):
 		print('Analysis done')
@@ -80,8 +83,22 @@ locate_object = LOCATE_OBJECT()
 
 class SET_DESIRED_OBJECT(abstract_state):
 	def entry(self):
+		# change condition for running
+		if True:
+			print('Setting object as complete')
+			task_resp = services.call_set_task_complete()
+			if not task_resp.success:
+				fail_msg = 'The arm could not set the task as complete'
+				fail_error(fail_msg)
+			else:
+				if task_resp.is_empty:
+					print('No objects left')
+					# add stuff here
 		print('Choosing the next desired object')
-		services.call_set_task_complete().is_complete
+		success = services.call_set_object().success
+		if not success:
+			fail_msg = 'The arm was unable to set the desired object'
+			fail_error(fail_msg)
 set_desired_object = SET_DESIRED_OBJECT()
 
 class LATERAL_MOVE(abstract_state):

@@ -1,38 +1,49 @@
 #!/usr/bin/env python
 
 import rospy
-from control.srv import isFieldAnalyzed, isFieldAnalyzedResponse, setTaskComplete, setTaskCompleteResponse
+from control.srv import isFieldAnalyzed, \
+    setTaskComplete, setTaskCompleteResponse, \
+    setObject
 from control.msg import classifier_list
 
 class classifier:
     def __init__(self):
         self.pub = rospy.Publisher('classifier_list', classifier_list, queue_size=10)
         self.analyze_serv = rospy.Service('is_field_analyzed', isFieldAnalyzed, self.analyze)
+        self.set_object_serv = rospy.Service('set_object', setObject, self.set_object)
         self.complete_task_serv = rospy.Service('set_task_complete', setTaskComplete, self.set_task_complete)
         self.object_list = []
         self.x = 0
         self.y = 0
         self.obj_class = ""
 
+    # services
+
     # set object as head of list
-    def set_object(self):
+    def set_object(self, req):
         self.x = self.object_list[0].get_x()
         self.y = self.object_list[0].get_y()
         self.obj_class = self.object_list[0].get_obj_class()
+        return True
 
-    # services
     def analyze(self, req):
     	print('Searching field for what objects are present and where in the field')
         obj = object(5,5,"foo")
         self.object_list.append(obj)
-        self.set_object()
+        #self.object_list.append(obj)
+        #self.set_object()
     	return True
 
+    # complete
     def set_task_complete(self, req):
+        response = setTaskCompleteResponse()
         if len(self.object_list) > 1:
-            self.object_list = self.object_list.pop(0)
-            self.set_object()
-        return True
+            self.object_list.pop(0)
+            response.is_empty = False
+            #self.set_object()
+        response.is_empty = True
+        response.success = True
+        return response
 
 
 class object:
