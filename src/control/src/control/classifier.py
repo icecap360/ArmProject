@@ -2,7 +2,7 @@
 
 import rospy
 from control.srv import (
-    isFieldAnalyzed,
+    locateAllObjects,
     setTaskComplete,
     setTaskCompleteResponse,
     setObject
@@ -12,7 +12,7 @@ from control.msg import classifier_list
 class classifier:
     def __init__(self):
         self.pub = rospy.Publisher('classifier_list', classifier_list, queue_size=10)
-        self.analyze_serv = rospy.Service('is_field_analyzed', isFieldAnalyzed, self.analyze)
+        self.analyze_serv = rospy.Service('locate_all_objects', locateAllObjects, self.locate_all_objects)
         self.set_object_serv = rospy.Service('set_object', setObject, self.set_object)
         self.complete_task_serv = rospy.Service('set_task_complete', setTaskComplete, self.set_task_complete)
         self.object_list = []
@@ -29,7 +29,7 @@ class classifier:
         self.obj_class = self.object_list[0].get_obj_class()
         return True
 
-    def analyze(self, req):
+    def locate_all_objects(self, req):
     	print('Searching field for what objects are present and where in the field')
         obj = object(5,5,"foo")
         self.object_list.append(obj)

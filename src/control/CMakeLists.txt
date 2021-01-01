@@ -60,7 +60,7 @@ add_message_files(
 add_service_files(
  FILES
  isGo.srv
- isFieldAnalyzed.srv
+ locateAllObjects.srv
  isMoveComplete.srv
  setTaskComplete.srv
  setObject.srv

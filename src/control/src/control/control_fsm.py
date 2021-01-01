@@ -7,7 +7,7 @@ from control.msg import (
 )
 from control.srv import (
 	isGo,
-	isFieldAnalyzed,
+	locateAllObjects,
 	isMoveComplete,
 	setTaskComplete,
 	setObject
@@ -31,8 +31,8 @@ class SERVICES:
 	def initialize(self):
 		rospy.wait_for_service('is_go')
 		self.is_go = rospy.ServiceProxy('is_go', isGo)
-		rospy.wait_for_service('is_field_analyzed')
-		self.is_field_analyzed = rospy.ServiceProxy('is_field_analyzed', isFieldAnalyzed)
+		rospy.wait_for_service('locate_all_objects')
+		self.locate_all_objects = rospy.ServiceProxy('locate_all_objects', locateAllObjects)
 		rospy.wait_for_service('lateral_move')
 		self.lateral_move = rospy.ServiceProxy('lateral_move', isMoveComplete)
 		rospy.wait_for_service('set_task_complete')
@@ -47,8 +47,8 @@ class SERVICES:
 	# Defining all services getters
 	def call_is_go(self):
 		return self.is_go()
-	def call_is_field_analyzed(self):
-		return self.is_field_analyzed()
+	def call_locate_all_objects(self):
+		return self.locate_all_objects()
 	def call_lateral_move(self):
 		return self.lateral_move()
 	def call_set_task_complete(self):
@@ -87,16 +87,16 @@ class NEUTRAL_POSE(abstract_state):
 		print('Go signaled, starting')
 neutral_pose = NEUTRAL_POSE()
 
-class LOCATE_OBJECT(abstract_state):
+class LOCATE_ALL_OBJECT(abstract_state):
 	def entry(self):
 		print('Analysing the current field of objects')
-		success = services.call_is_field_analyzed().is_field_analyzed
+		success = services.call_locate_all_objects().is_field_analyzed
 		if not success:
 			fail_msg = 'The arm was unable to analyze the field'
 			fail_error(fail_msg)
 	def exit(self):
 		print('Analysis done')
-locate_object = LOCATE_OBJECT()
+locate_all_object = LOCATE_ALL_OBJECT()
 
 class SET_DESIRED_OBJECT(abstract_state):
 	def entry(self):
@@ -151,8 +151,8 @@ class transition3(abstract_transition):
 THE FINITE STATE MACHINE IS AN ADJACENCY LIST.
 """
 finite_state_machine = {
-	neutral_pose : [is_go(locate_object)],
-	locate_object : [default(set_desired_object)],
+	neutral_pose : [is_go(locate_all_object)],
+	locate_all_object : [default(set_desired_object)],
 	set_desired_object : [default(lateral_move)],
 	lateral_move : [default(ensure_is_on_top)],
 	ensure_is_on_top : [default(neutral_pose)]
