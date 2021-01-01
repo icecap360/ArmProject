@@ -17,6 +17,7 @@
   <!--node pkg="control" type="control_fsm.py" name="control_fsm" respawn="true"/-->
   <node pkg="control" type="classifier.py" name="classifier" respawn="true"/>
   <node pkg="control" type="is_on_top.py" name="is_on_top" respawn="true"/>
+  <node pkg="control" type="move.py" name="lateral_move" respawn="true"/>
   <!-- example client -->
   <!--node pkg="control" type="client_ex.py" name="client_ex"
     required="false" output="screen" launch-prefix="gnome-terminal - -command"/-->

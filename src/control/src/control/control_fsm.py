@@ -22,13 +22,13 @@ class SERVICES:
 		rospy.wait_for_service('is_field_analyzed')
 		self.is_field_analyzed = rospy.ServiceProxy('is_field_analyzed', isFieldAnalyzed)
 		# change
-		rospy.wait_for_service('is_field_analyzed')
+		rospy.wait_for_service('lateral_move')
 		self.lateral_move = rospy.ServiceProxy('lateral_move', isMoveComplete)
 		rospy.wait_for_service('set_task_complete')
 		self.set_task_complete = rospy.ServiceProxy('set_task_complete', setTaskComplete)
 		self.ensure_is_on_top = actionlib.SimpleActionClient('ensure_is_on_top', ensureIsOnTopAction)
 		self.ensure_is_on_top.wait_for_server()
-		
+
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
