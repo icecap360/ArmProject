@@ -11,7 +11,7 @@ from control.msg import object_lateral
 
 class classifier:
     def __init__(self):
-        self.pub = rospy.Publisher('object_lateral', object_lateral, queue_size=10)
+        self.object_lateral_topic = rospy.Publisher('object_lateral', object_lateral, queue_size=10)
         self.analyze_serv = rospy.Service('locate_all_objects', locateAllObjects, self.locate_all_objects)
         self.set_object_serv = rospy.Service('set_object', setObject, self.set_object)
         self.complete_task_serv = rospy.Service('set_task_complete', setTaskComplete, self.set_task_complete)
@@ -66,5 +66,5 @@ if __name__ == '__main__':
     # main loop
     r = rospy.Rate(10)
     while not rospy.is_shutdown():
-        classifier.pub.publish(classifier.x, classifier.y, classifier.obj_class)
+        classifier.object_lateral_topic.publish(classifier.x, classifier.y, classifier.obj_class)
         r.sleep();
