@@ -41,6 +41,12 @@ class SERVICES:
 		return self.lateral_move()
 	def call_set_task_complete(self):
 		return self.set_task_complete()
+	def call_ensure_is_on_top(self):
+		goal = ensureIsOnTopGoal()
+		services.ensure_is_on_top.send_goal(goal)
+		services.ensure_is_on_top.wait_for_result()
+		#no point of result, isontop keeps running unless preempted or error<tolerance
+		return services.ensure_is_on_top.get_result().is_on_top
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -96,10 +102,7 @@ lateral_move = LATERAL_MOVE()
 class ENSURE_IS_ON_TOP(abstract_state):
 	def entry(self):
 		print('Verifying arm is on top of object')
-		goal = ensureIsOnTopGoal()
-		services.ensure_is_on_top.send_goal(goal)
-		services.ensure_is_on_top.wait_for_result()
-		result = services.ensure_is_on_top.get_result() #no point of result, isontp keeps running unless preempted or error<tolerance
+		services.call_ensure_is_on_top()
 	def exit(self):
 		print('Arm is on top of object')
 ensure_is_on_top = ENSURE_IS_ON_TOP()

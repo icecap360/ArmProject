@@ -12,7 +12,7 @@ while(1):
 	if rospy.is_shutdown():
 		break
 	transitions = finite_state_machine[currentState]
-	time.sleep(2.5)
+	time.sleep(1)
 	for t in transitions:
 		if t.condition():
 			if hasattr(currentState, 'exit'):
