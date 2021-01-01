@@ -9,7 +9,7 @@ from control.srv import (
 	isGo,
 	isFieldAnalyzed,
 	isMoveComplete,
-	setTaskComplete
+	setTaskComplete,
 	setObject
 )
 import time
@@ -139,7 +139,9 @@ ensure_is_on_top = ENSURE_IS_ON_TOP()
 
 class is_go(abstract_transition):
 	def condition(self):
-		return services.call_is_go()
+		temp = services.call_is_go()
+		print(temp)
+		return temp
 class default(abstract_transition):
 	def condition(self):
 		return True
