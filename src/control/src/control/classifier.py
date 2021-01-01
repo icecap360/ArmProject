@@ -32,9 +32,7 @@ class classifier:
         if len(self.object_list) > 1:
             self.object_list = self.object_list.pop(0)
             self.set_object()
-            return True
-        # no objects left
-        return False
+        return True
 
 
 class object:

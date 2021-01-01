@@ -18,7 +18,7 @@ class ensure_is_on_top(object):
 		self.error_tolerance = 100 
 	
 	def calculate_error(self):
-		error = 0.1
+		error = 1.5
 		pose = 0.5
 		return error,pose
 
@@ -34,21 +34,19 @@ class ensure_is_on_top(object):
 			self._feedback.current_error = error
 			self._as.publish_feedback(self._feedback)
 			# publish info to the console for the user
-			rospy.loginfo('The current error is', error)
-		
-			if self.is_preempt_requested():
+			rospy.loginfo('The current error is %f'% error)
+			if self._as.is_preempt_requested():
 				rospy.loginfo('Preempted Arm is on top of object verification')
 				self._as.set_preempted()
 				success = False
 				break
 			elif (error < self.error_tolerance):
-				rospy.loginfo('Within the error tolerance the Arm on top of object')
+				rospy.loginfo('The error is within the tolerance')
 				r.sleep()
 				break
 			else:
 				#move robot to next_pose, import helpers from moveit
 				pass
-			
 		if success:
 			self._result.is_on_top = True
 			rospy.loginfo('Is on top verification succeded')

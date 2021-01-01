@@ -1,5 +1,7 @@
 from abc import ABCMeta, abstractmethod
 import rospy
+import actionlib
+from control.msg import ensureIsOnTopGoal, ensureIsOnTopAction
 from control.srv import isGo, isFieldAnalyzed, isMoveComplete, setTaskComplete
 import time
 
@@ -24,6 +26,9 @@ class SERVICES:
 		self.lateral_move = rospy.ServiceProxy('lateral_move', isMoveComplete)
 		rospy.wait_for_service('set_task_complete')
 		self.set_task_complete = rospy.ServiceProxy('set_task_complete', setTaskComplete)
+		self.ensure_is_on_top = actionlib.SimpleActionClient('ensure_is_on_top', ensureIsOnTopAction)
+		self.ensure_is_on_top.wait_for_server()
+		
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
@@ -76,10 +81,7 @@ locate_object = LOCATE_OBJECT()
 class SET_DESIRED_OBJECT(abstract_state):
 	def entry(self):
 		print('Choosing the next desired object')
-		success = services.call_set_task_complete().is_complete
-		if not success:
-			fail_msg = 'No tasks left to complete'
-			fail_error(fail_msg)
+		services.call_set_task_complete().is_complete
 set_desired_object = SET_DESIRED_OBJECT()
 
 class LATERAL_MOVE(abstract_state):
@@ -94,6 +96,10 @@ lateral_move = LATERAL_MOVE()
 class ENSURE_IS_ON_TOP(abstract_state):
 	def entry(self):
 		print('Verifying arm is on top of object')
+		goal = ensureIsOnTopGoal()
+		services.ensure_is_on_top.send_goal(goal)
+		services.ensure_is_on_top.wait_for_result()
+		result = services.ensure_is_on_top.get_result() #no point of result, isontp keeps running unless preempted or error<tolerance
 	def exit(self):
 		print('Arm is on top of object')
 ensure_is_on_top = ENSURE_IS_ON_TOP()
