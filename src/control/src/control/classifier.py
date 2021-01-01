@@ -7,11 +7,11 @@ from control.srv import (
     setTaskCompleteResponse,
     setObject
 )
-from control.msg import classifier_list
+from control.msg import object_lateral
 
 class classifier:
     def __init__(self):
-        self.pub = rospy.Publisher('classifier_list', classifier_list, queue_size=10)
+        self.pub = rospy.Publisher('object_lateral', object_lateral, queue_size=10)
         self.analyze_serv = rospy.Service('locate_all_objects', locateAllObjects, self.locate_all_objects)
         self.set_object_serv = rospy.Service('set_object', setObject, self.set_object)
         self.complete_task_serv = rospy.Service('set_task_complete', setTaskComplete, self.set_task_complete)
@@ -33,8 +33,7 @@ class classifier:
     	print('Searching field for what objects are present and where in the field')
         obj = object(5,5,"foo")
         self.object_list.append(obj)
-        #self.object_list.append(obj)
-        #self.set_object()
+        self.object_list.append(obj)
     	return True
 
     # complete
@@ -43,8 +42,8 @@ class classifier:
         if len(self.object_list) > 1:
             self.object_list.pop(0)
             response.is_empty = False
-            #self.set_object()
-        response.is_empty = True
+        else:
+            response.is_empty = True
         response.success = True
         return response
 
