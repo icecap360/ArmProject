@@ -139,7 +139,7 @@ ensure_is_on_top = ENSURE_IS_ON_TOP()
 
 class is_go(abstract_transition):
 	def condition(self):
-		return services.call_is_go()
+		return services.call_is_go().is_go
 class default(abstract_transition):
 	def condition(self):
 		return True
