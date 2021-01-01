@@ -1,8 +1,17 @@
 from abc import ABCMeta, abstractmethod
 import rospy
 import actionlib
-from control.msg import ensureIsOnTopGoal, ensureIsOnTopAction
-from control.srv import isGo, isFieldAnalyzed, isMoveComplete, setTaskComplete, setObject
+from control.msg import (
+	ensureIsOnTopGoal,
+	ensureIsOnTopAction
+)
+from control.srv import (
+	isGo,
+	isFieldAnalyzed,
+	isMoveComplete,
+	setTaskComplete
+	setObject
+)
 import time
 
 """HELPERS"""
@@ -10,7 +19,10 @@ def fail_error(mssg):
 	fail = 'FAIL:'+mssg+', ABORTING'
 	print(fail)
 	rospy.signal_shutdown(fail)
-
+def has_exit_commands(currentState):
+	return hasattr(currentState, 'exit')
+def has_during_commands(currentState):
+	return hasattr(currentState, 'during')
 
 """SERVICES DECLARATION AND INITIALIZATION"""
 class SERVICES:
@@ -29,7 +41,6 @@ class SERVICES:
 		self.set_object = rospy.ServiceProxy('set_object', setObject)
 		self.ensure_is_on_top = actionlib.SimpleActionClient('ensure_is_on_top', ensureIsOnTopAction)
 		self.ensure_is_on_top.wait_for_server()
-
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
@@ -44,6 +55,12 @@ class SERVICES:
 		return self.set_task_complete()
 	def call_set_object(self):
 		return self.set_object()
+	def call_ensure_is_on_top(self):
+		goal = ensureIsOnTopGoal()
+		services.ensure_is_on_top.send_goal(goal)
+		services.ensure_is_on_top.wait_for_result()
+		#no point of result, isontop keeps running unless preempted or error<tolerance
+		return services.ensure_is_on_top.get_result().is_on_top
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -113,10 +130,7 @@ lateral_move = LATERAL_MOVE()
 class ENSURE_IS_ON_TOP(abstract_state):
 	def entry(self):
 		print('Verifying arm is on top of object')
-		goal = ensureIsOnTopGoal()
-		services.ensure_is_on_top.send_goal(goal)
-		services.ensure_is_on_top.wait_for_result()
-		result = services.ensure_is_on_top.get_result() #no point of result, isontp keeps running unless preempted or error<tolerance
+		services.call_ensure_is_on_top()
 	def exit(self):
 		print('Arm is on top of object')
 ensure_is_on_top = ENSURE_IS_ON_TOP()

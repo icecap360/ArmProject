@@ -12,11 +12,7 @@ from control.msg import ensureIsOnTopGoal, ensureIsOnTopAction
 def is_on_top_client():
 	# Creates the SimpleActionClient, passing the type of the action
 	# (FibonacciAction) to the constructor.
-	client = actionlib.SimpleActionClient('ensure_is_on_top', ensureIsOnTopAction)
-
-	# Waits until the action server has started up and started
-	# listening for goals.
-	client.wait_for_server()
+	
 
 	# Creates a goal to send to the action server.
 	goal = ensureIsOnTopGoal()

@@ -1,9 +1,12 @@
 #!/usr/bin/env python
 
 import rospy
-from control.srv import isFieldAnalyzed, \
-    setTaskComplete, setTaskCompleteResponse, \
+from control.srv import (
+    isFieldAnalyzed,
+    setTaskComplete,
+    setTaskCompleteResponse
     setObject
+)
 from control.msg import classifier_list
 
 class classifier:

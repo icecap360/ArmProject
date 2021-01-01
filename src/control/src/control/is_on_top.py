@@ -3,9 +3,13 @@
 import rospy
 import actionlib
 import control.msg
-from control.msg import ensureIsOnTopFeedback, ensureIsOnTopResult, ensureIsOnTopAction
+from control.msg import (
+	ensureIsOnTopFeedback, 
+	ensureIsOnTopResult, 
+	ensureIsOnTopAction
+)
 
-class ensure_is_on_top(object):
+class ensureIsOnTop(object):
 	# create messages that are used to publish feedback/result
 	_feedback = ensureIsOnTopFeedback()
 	_result = ensureIsOnTopResult()
@@ -34,14 +38,14 @@ class ensure_is_on_top(object):
 			self._feedback.current_error = error
 			self._as.publish_feedback(self._feedback)
 			# publish info to the console for the user
-			rospy.loginfo('The current error is %f'% error)
+			print('The current error is %f'% error)
 			if self._as.is_preempt_requested():
-				rospy.loginfo('Preempted Arm is on top of object verification')
+				print('Preempted Arm is on top of object verification')
 				self._as.set_preempted()
 				success = False
 				break
 			elif (error < self.error_tolerance):
-				rospy.loginfo('The error is within the tolerance')
+				print('The error is within the tolerance')
 				r.sleep()
 				break
 			else:
@@ -49,10 +53,10 @@ class ensure_is_on_top(object):
 				pass
 		if success:
 			self._result.is_on_top = True
-			rospy.loginfo('Is on top verification succeded')
+			print('Is on top verification succeded')
 			self._as.set_succeeded(self._result)
 
 if __name__ == '__main__':
 	rospy.init_node('is_on_top')
-	server = ensure_is_on_top()
+	ensure_is_on_top = ensureIsOnTop()
 	rospy.spin()

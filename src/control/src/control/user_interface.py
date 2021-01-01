@@ -6,7 +6,7 @@ from control.msg import class_list
 from control.srv import isGo, isGoResponse
 #import string
 
-class user_interface:
+class userInterface:
     def __init__(self):
         self.pub = rospy.Publisher('desired_classes', class_list, queue_size=10)
         self.serv = rospy.Service('is_go', isGo, self.is_go)
@@ -27,12 +27,12 @@ class user_interface:
 
 
 if __name__ == '__main__':
-    rospy.init_node('desired_classes', anonymous=True)
+    rospy.init_node('user_interface', anonymous=True)
     # call constructor
-    ui = user_interface()
+    user_interface = userInterface()
     # main loop
     r = rospy.Rate(10)
     while not rospy.is_shutdown():
-        ui.pub.publish(ui.desired_classes)
+        user_interface.pub.publish(user_interface.desired_classes)
         #print(add_two_ints(1,2))
         r.sleep();
