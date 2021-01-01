@@ -91,6 +91,13 @@ class LATERAL_MOVE(abstract_state):
 			fail_error(fail_msg)
 lateral_move = LATERAL_MOVE()
 
+class ENSURE_IS_ON_TOP(abstract_state):
+	def entry(self):
+		print('Verifying arm is on top of object')
+	def exit(self):
+		print('Arm is on top of object')
+ensure_is_on_top = ENSURE_IS_ON_TOP()
+
 """"TRANSITION DEFINITIONS"""
 
 class is_go(abstract_transition):
@@ -110,5 +117,6 @@ finite_state_machine = {
 	neutral_pose : [is_go(locate_object)],
 	locate_object : [default(set_desired_object)],
 	set_desired_object : [default(lateral_move)],
-	lateral_move : [default(neutral_pose)]
+	lateral_move : [default(ensure_is_on_top)],
+	ensure_is_on_top : [default(neutral_pose)]
 }

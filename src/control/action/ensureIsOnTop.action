@@ -1,0 +1,7 @@
+# Define the goal
+---
+# Define the result
+bool is_on_top
+---
+# Define a feedback message
+float32 current_error
