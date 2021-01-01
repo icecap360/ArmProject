@@ -3,9 +3,13 @@
 import rospy
 import actionlib
 import control.msg
-from control.msg import ensureIsOnTopFeedback, ensureIsOnTopResult, ensureIsOnTopAction
+from control.msg import (
+	ensureIsOnTopFeedback, 
+	ensureIsOnTopResult, 
+	ensureIsOnTopAction
+)
 
-class ensure_is_on_top(object):
+class ensureIsOnTop(object):
 	# create messages that are used to publish feedback/result
 	_feedback = ensureIsOnTopFeedback()
 	_result = ensureIsOnTopResult()
@@ -54,5 +58,5 @@ class ensure_is_on_top(object):
 
 if __name__ == '__main__':
 	rospy.init_node('is_on_top')
-	server = ensure_is_on_top()
+	ensure_is_on_top = ensureIsOnTop()
 	rospy.spin()

@@ -1,8 +1,16 @@
 from abc import ABCMeta, abstractmethod
 import rospy
 import actionlib
-from control.msg import ensureIsOnTopGoal, ensureIsOnTopAction
-from control.srv import isGo, isFieldAnalyzed, isMoveComplete, setTaskComplete
+from control.msg import (
+	ensureIsOnTopGoal, 
+	ensureIsOnTopAction
+)
+from control.srv import (
+	isGo, 
+	isFieldAnalyzed, 
+	isMoveComplete, 
+	setTaskComplete
+)
 import time
 
 """HELPERS"""
@@ -31,7 +39,6 @@ class SERVICES:
 		self.set_task_complete = rospy.ServiceProxy('set_task_complete', setTaskComplete)
 		self.ensure_is_on_top = actionlib.SimpleActionClient('ensure_is_on_top', ensureIsOnTopAction)
 		self.ensure_is_on_top.wait_for_server()
-
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
