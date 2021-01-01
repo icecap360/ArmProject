@@ -18,7 +18,7 @@ class classifier:
     def set_object(self):
         self.x = self.objects[0].get_x()
         self.y = self.objects[0].get_y()
-        self.obj_class = self.objects[0].get_obj_class()
+        self.obj_class = self.objects[0].get_class()
 
     # services
     def analyze(self, req):
