@@ -9,7 +9,7 @@ from control.srv import (
 	isGo,
 	isFieldAnalyzed,
 	isMoveComplete,
-	setTaskComplete
+	setTaskComplete,
 	setObject
 )
 import time

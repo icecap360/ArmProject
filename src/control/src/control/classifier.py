@@ -4,7 +4,7 @@ import rospy
 from control.srv import (
     isFieldAnalyzed,
     setTaskComplete,
-    setTaskCompleteResponse
+    setTaskCompleteResponse,
     setObject
 )
 from control.msg import classifier_list
