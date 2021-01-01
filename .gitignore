@@ -1,3 +1,5 @@
 /build/
 /devel/
 *.pyc
+*.vscode
+*__pycache__
