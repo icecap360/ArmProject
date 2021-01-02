@@ -19,6 +19,7 @@
     respawn="true" output="screen"/>
   <node pkg="control" type="is_on_top.py" name="is_on_top" respawn="true"/>
   <node pkg="control" type="move.py" name="lateral_move" respawn="true"/>
+  <node pkg="control" type="calculate_dimension.py" name="calculate_dimension" respawn="true"/>
   <!-- example client -->
   <!--node pkg="control" type="client_ex.py" name="client_ex"
     required="false" output="screen" launch-prefix="gnome-terminal - -command"/-->
