@@ -6,12 +6,19 @@ from control.srv import (
 )
 
 class hasObject:
-	def __init__(self):
-		self.update_has_object_serv = rospy.Service('update_has_object', isObjectPicked, self.update_has_object)
-	
-	def update_has_object(self, req):
-		self.has_object = False
-		return self.has_object
+    def __init__(self):
+        self.update_has_object_serv = rospy.Service('update_has_object', isObjectPicked, self.update_has_object)
+        self.has_object = 0
+
+    def get_has_object(self):
+        return self.has_object
+    def set_has_object(self, has_object):
+        self.has_object = has_object
+
+    """ service """
+    def update_has_object(self, req):
+		self.set_has_object(False)
+		return self.get_has_object()
 
 if __name__ == '__main__':
     rospy.init_node('has_object', anonymous=True)

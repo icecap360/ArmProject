@@ -1,10 +1,8 @@
 #! /usr/bin/env python
 
 import rospy
-# from std_msgs.msg import String
 from control.msg import class_list, arm_parameters
 from control.srv import isGo, isGoResponse
-#import string
 
 class userInterface:
     def __init__(self):
@@ -12,18 +10,19 @@ class userInterface:
         self.serv = rospy.Service('is_go', isGo, self.is_go)
         self.desired_class_list = [""]
 
-    # define service
-    def is_go(self, req):
-        return self.get_desired_classes()
-
     def get_desired_classes(self):
-        self.desired_class_list = raw_input("Enter space seperated desired classes: ").split()
+        self.set_desired_classes(raw_input("Enter space seperated desired classes: ").split() )
         return self.start()
-
+    def set_desired_classes(self, desired_classes):
+        self.desired_classes_list = desired_classes
     def start(self):
         if raw_input("Start robot? (y/n) ") == 'y':
             return True
         return False
+
+    """ service """
+    def is_go(self, req):
+        return self.get_desired_classes()
 
 if __name__ == '__main__':
     rospy.init_node('user_interface', anonymous=True)

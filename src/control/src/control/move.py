@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import rospy
-
 from params import get_neutral_pose
 from control.msg import object_lateral, arm_parameters
 from control.srv import isMoveComplete, moveToNeutralPose

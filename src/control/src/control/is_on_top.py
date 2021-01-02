@@ -5,8 +5,8 @@ import actionlib
 
 from params import get_lateral_error_tolerance
 from control.msg import (
-	ensureIsOnTopFeedback, 
-	ensureIsOnTopResult, 
+	ensureIsOnTopFeedback,
+	ensureIsOnTopResult,
 	ensureIsOnTopAction,
 	arm_parameters
 )
@@ -22,7 +22,7 @@ class ensureIsOnTop(object):
 		self._as.start()
 		#error tolerance should be a programmable parameter from paramserver
 		self.lateral_error_tolerance = get_lateral_error_tolerance()
-	
+
 	def calculate_error(self):
 		error = 1.5
 		pose = 0.5
@@ -32,11 +32,11 @@ class ensureIsOnTop(object):
 		# helper variables
 		r = rospy.Rate(1)
 		success = True
-		
+
 		# calculate the current error
-		error = 99999#this should be infinite
+		error = float("inf")#this should be infinite
 		while (True):
-			error, next_pose = self.calculate_error() 
+			error, next_pose = self.calculate_error()
 			self._feedback.current_error = error
 			self._as.publish_feedback(self._feedback)
 			# publish info to the console for the user

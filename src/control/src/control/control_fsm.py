@@ -15,7 +15,7 @@ from control.srv import (
 	calculateDimension,
 	moveToNeutralPose
 )
-import time
+#import time
 
 """HELPERS"""
 def fail_error(mssg):
