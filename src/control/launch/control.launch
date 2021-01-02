@@ -10,7 +10,7 @@
       output="screen" used for print statements into terminal
       launch-prefix="gnome-terminal - -command" used to start node in new terminal
   -->
-
+  <rosparam command="load" file="$(find control)/config/params.yaml"/>
   <!-- user_interface should be opened in new terminal to make cleaner ui-->
   <node pkg="control" type="user_interface.py" name="desired_classes"
     required="false" output="screen" launch-prefix="gnome-terminal --command"/>

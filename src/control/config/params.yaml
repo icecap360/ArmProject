@@ -1,0 +1,7 @@
+neutral:
+  x: 1
+  y: 2
+  z: 3
+error_tolerance:
+  lateral: 4
+camera_offset: 5
