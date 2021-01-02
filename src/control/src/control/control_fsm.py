@@ -140,6 +140,13 @@ class CALCULATE_DIMENSIONS(abstract_state):
 		print('Calculating dimensions of object')
 calculate_dimensions = CALCULATE_DIMENSIONS()
 
+class PICK_OBJECT(abstract_state):
+	def entry(self):
+		print('Picking up object')
+	def exit(self):
+		print('Determining if arm picked up successfully')
+pick_object = PICK_OBJECT()
+
 """"TRANSITION DEFINITIONS"""
 
 class is_go(abstract_transition):
@@ -161,5 +168,6 @@ finite_state_machine = {
 	set_desired_object : [default(lateral_move)],
 	lateral_move : [default(ensure_is_on_top)],
 	ensure_is_on_top : [default(calculate_dimensions)],
-	calculate_dimensions : [default(neutral_pose)]
+	calculate_dimensions : [default(pick_object)],
+	pick_object : [default(neutral_pose)]
 }
