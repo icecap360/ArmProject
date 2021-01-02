@@ -68,6 +68,7 @@ add_service_files(
  setObject.srv
  calculateDim.srv
  isObjectPicked.srv
+ moveToNeutralPose.srv
 )
 
 ## Generate actions in the 'action' folder

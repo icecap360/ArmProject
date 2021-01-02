@@ -12,7 +12,8 @@ from control.srv import (
 	setTaskComplete,
 	setObject,
 	isObjectPicked,
-	calculateDimension
+	calculateDimension,
+	moveToNeutralPose
 )
 import time
 
@@ -49,6 +50,8 @@ class SERVICES:
 		self.pick_object = rospy.ServiceProxy('pick_object', isMoveComplete)
 		rospy.wait_for_service('update_has_object')
 		self.update_has_object = rospy.ServiceProxy('update_has_object', isObjectPicked)
+		rospy.wait_for_service('move_to_neutral_pose')
+		self.move_to_neutral_pose = rospy.ServiceProxy('move_to_neutral_pose', moveToNeutralPose)
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
@@ -75,6 +78,8 @@ class SERVICES:
 		return services.update_has_object().is_object_picked
 	def call_calculate_dimension(self):
 		return self.calculate_dimension()
+	def call_move_to_neutral_pose(self):
+		return self.move_to_neutral_pose()
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -95,6 +100,11 @@ class abstract_transition:
 class NEUTRAL_POSE(abstract_state):
 	def entry(self):
 		print('Arm Ready')
+		print('Moving arm to neutral pose')
+		success = services.call_move_to_neutral_pose().success
+		if not success:
+			fail_msg = 'The arm was unable to move to neutral pose'
+			fail_error(fail_msg)
 	def during(self):
 		print('Holding robot constant')
 	def exit(self):
