@@ -44,12 +44,14 @@ class SERVICES:
 		self.ensure_is_on_top.wait_for_server()
 		rospy.wait_for_service('calculate_dimension')
 		self.calculate_dimension = rospy.ServiceProxy('calculate_dimension', calculateDimension)
+		rospy.wait_for_service('pick_object')
+		self.pick_object = rospy.ServiceProxy('pick_object', isMoveComplete)
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
 	# Defining all services getters
 	def call_is_go(self):
-		return self.is_go()
+		return self.is_go().is_go
 	def call_locate_all_objects(self):
 		return self.locate_all_objects()
 	def call_lateral_move(self):
@@ -64,6 +66,8 @@ class SERVICES:
 		services.ensure_is_on_top.wait_for_result()
 		#no point of result, isontop keeps running unless preempted or error<tolerance
 		return services.ensure_is_on_top.get_result().is_on_top
+	def call_pick_object(self):
+		return service.pick_object()
 	def call_calculate_dimension(self):
 		return self.calculate_dimension()
 services = SERVICES()
@@ -153,14 +157,14 @@ class PICK_OBJECT(abstract_state):
 	def entry(self):
 		print('Picking up object')
 	def exit(self):
-		print('Determining if arm picked up successfully')
+		print('Determining if arm has picked object')
 pick_object = PICK_OBJECT()
 
 """"TRANSITION DEFINITIONS"""
 
 class is_go(abstract_transition):
 	def condition(self):
-		return services.call_is_go().is_go
+		return services.call_is_go()
 class default(abstract_transition):
 	def condition(self):
 		return True

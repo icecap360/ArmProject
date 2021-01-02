@@ -67,6 +67,7 @@ add_service_files(
  setTaskComplete.srv
  setObject.srv
  calculateDimension.srv
+ isObjectPicked.srv
 )
 
 ## Generate actions in the 'action' folder
