@@ -2,7 +2,8 @@
 
 import rospy
 import actionlib
-import control.msg
+
+from params import get_lateral_error_tolerance
 from control.msg import (
 	ensureIsOnTopFeedback, 
 	ensureIsOnTopResult, 
@@ -20,14 +21,12 @@ class ensureIsOnTop(object):
 		self._as = actionlib.SimpleActionServer(self._action_name, self._action, execute_cb=self.execute_cb, auto_start = False)
 		self._as.start()
 		#error tolerance should be a programmable parameter from paramserver
-		self.error_tolerance = rospy.Subscriber("arm_parameter_server", arm_parameters, self.get_error_tolerance)
+		self.lateral_error_tolerance = get_lateral_error_tolerance()
 	
 	def calculate_error(self):
 		error = 1.5
 		pose = 0.5
 		return error,pose
-	def get_error_tolerance(self, arm_params):
-		self.lateral_error_tolerance = arm_parameters.lateral_error_tolerance
 
 	def execute_cb(self, goal):
 		# helper variables
