@@ -66,7 +66,7 @@ add_service_files(
  isMoveComplete.srv
  setTaskComplete.srv
  setObject.srv
- calculateDimension.srv
+ calculateDim.srv
  isObjectPicked.srv
 )
 
