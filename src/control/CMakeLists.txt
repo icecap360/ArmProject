@@ -54,6 +54,7 @@ add_message_files(
  FILES
  class_list.msg
  object_lateral.msg
+ object_dimension.msg
  arm_parameters.msg
 )
 
@@ -65,6 +66,7 @@ add_service_files(
  isMoveComplete.srv
  setTaskComplete.srv
  setObject.srv
+ calculateDimension.srv
  isObjectPicked.srv
 )
 

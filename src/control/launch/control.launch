@@ -19,6 +19,7 @@
     respawn="true" output="screen"/>
   <node pkg="control" type="is_on_top.py" name="is_on_top" respawn="true"/>
   <node pkg="control" type="move.py" name="move" respawn="true"/>
+  <node pkg="control" type="calculate_dimension.py" name="calculate_dimension" respawn="true"/>
   <node pkg="control" type="has_object.py" name="has_object" respawn="true"/>
 
   <!-- example client -->

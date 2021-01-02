@@ -11,7 +11,8 @@ from control.srv import (
 	isMoveComplete,
 	setTaskComplete,
 	setObject,
-	isObjectPicked
+	isObjectPicked,
+	calculateDimension
 )
 import time
 
@@ -42,6 +43,8 @@ class SERVICES:
 		self.set_object = rospy.ServiceProxy('set_object', setObject)
 		self.ensure_is_on_top = actionlib.SimpleActionClient('ensure_is_on_top', ensureIsOnTopAction)
 		self.ensure_is_on_top.wait_for_server()
+		rospy.wait_for_service('calculate_dimension')
+		self.calculate_dimension = rospy.ServiceProxy('calculate_dimension', calculateDimension)
 		rospy.wait_for_service('pick_object')
 		self.pick_object = rospy.ServiceProxy('pick_object', isMoveComplete)
 		rospy.wait_for_service('update_has_object')
@@ -70,6 +73,8 @@ class SERVICES:
 		return services.pick_object()
 	def call_update_has_object(self):
 		return services.update_has_object().is_object_picked
+	def call_calculate_dimension(self):
+		return self.calculate_dimension()
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -147,6 +152,10 @@ ensure_is_on_top = ENSURE_IS_ON_TOP()
 class CALCULATE_DIMENSIONS(abstract_state):
 	def entry(self):
 		print('Calculating dimensions of object')
+		success = services.call_calculate_dimension().success
+		if not success:
+			fail_msg = 'The arm was unable to calculate dimensions of object'
+			fail_error(fail_msg)
 calculate_dimensions = CALCULATE_DIMENSIONS()
 
 class PICK_OBJECT(abstract_state):
