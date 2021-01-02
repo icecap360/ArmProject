@@ -48,7 +48,7 @@ class SERVICES:
 		print('All services Setup')
 	# Defining all services getters
 	def call_is_go(self):
-		return self.is_go()
+		return self.is_go().is_go
 	def call_locate_all_objects(self):
 		return self.locate_all_objects()
 	def call_lateral_move(self):
@@ -155,7 +155,7 @@ pick_object = PICK_OBJECT()
 
 class is_go(abstract_transition):
 	def condition(self):
-		return services.call_is_go().is_go
+		return services.call_is_go()
 class default(abstract_transition):
 	def condition(self):
 		return True
