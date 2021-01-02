@@ -36,15 +36,13 @@ class userInterface:
         return arm_params
 
 
-
 if __name__ == '__main__':
     rospy.init_node('user_interface', anonymous=True)
     # call constructor
     user_interface = userInterface()
     # main loop
-    r = rospy.Rate(10)
+    r = rospy.Rate(10) #this should be decreased, arm_params is quite big
     while not rospy.is_shutdown():
         user_interface.desired_classes.publish(user_interface.desired_class_list)
         user_interface.arm_parameter_server.publish(user_interface.arm_parameters)
-        #print(add_two_ints(1,2))
         r.sleep();
