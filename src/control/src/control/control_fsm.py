@@ -135,6 +135,11 @@ class ENSURE_IS_ON_TOP(abstract_state):
 		print('Arm is on top of object')
 ensure_is_on_top = ENSURE_IS_ON_TOP()
 
+class CALCULATE_DIMENSIONS(abstract_state):
+	def entry(self):
+		print('Calculating dimensions of object')
+calculate_dimensions = CALCULATE_DIMENSIONS()
+
 """"TRANSITION DEFINITIONS"""
 
 class is_go(abstract_transition):
@@ -155,5 +160,6 @@ finite_state_machine = {
 	locate_all_object : [default(set_desired_object)],
 	set_desired_object : [default(lateral_move)],
 	lateral_move : [default(ensure_is_on_top)],
-	ensure_is_on_top : [default(neutral_pose)]
+	ensure_is_on_top : [default(calculate_dimensions)],
+	calculate_dimensions : [default(neutral_pose)]
 }
