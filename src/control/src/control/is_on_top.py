@@ -18,7 +18,7 @@ class ensureIsOnTop(object):
 	_action = ensureIsOnTopAction
 	def __init__(self):
 		self._action_name = 'ensure_is_on_top'
-		self._as = actionlib.SimpleActionServer(self._action_name, self._action, ensure_is_on_top_cb=self.ensure_is_on_top_cb, auto_start = False)
+		self._as = actionlib.SimpleActionServer(self._action_name, self._action, execute_cb=self.ensure_is_on_top_cb, auto_start = False)
 		self._as.start()
 		#error tolerance should be a programmable parameter from paramserver
 		self.lateral_error_tolerance = get_lateral_error_tolerance()

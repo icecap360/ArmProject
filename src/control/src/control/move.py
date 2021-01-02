@@ -11,6 +11,7 @@ class MoveIt:
 		#should these 3 neutral params be in parameter server
 		self.object_lateral = rospy.Subscriber("object_lateral", object_lateral, self.set_desired_object_coord)
 		self.lateral_move_serv = rospy.Service('lateral_move', isMoveComplete, self.lateral_move)
+		self.pick_object_serv = rospy.Service('pick_object', isMoveComplete, self.pick_object )
 		self.neutral_x ,  self.neutral_y , self.neutral_z = get_neutral_pose()
 		
 	def set_desired_object_coord(self, object_pose):
@@ -27,6 +28,12 @@ class MoveIt:
 		#actually moving (unlike the rest of this function this will likely be changed)
 		self.move_to_coord(desired_x, desired_y, self.neutral_z)
 		
+		return True
+	def pick_object(self,req):
+		#approach down diagnal
+		#approach lateral
+		#grab object
+		#pick_up object
 		return True
 
 if __name__ == '__main__':
