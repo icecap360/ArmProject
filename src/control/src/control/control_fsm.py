@@ -41,6 +41,8 @@ class SERVICES:
 		self.set_object = rospy.ServiceProxy('set_object', setObject)
 		self.ensure_is_on_top = actionlib.SimpleActionClient('ensure_is_on_top', ensureIsOnTopAction)
 		self.ensure_is_on_top.wait_for_server()
+		rospy.wait_for_service('pick_object')
+		self.pick_object = rospy.ServiceProxy('pick_object', isMoveComplete)
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
@@ -61,6 +63,8 @@ class SERVICES:
 		services.ensure_is_on_top.wait_for_result()
 		#no point of result, isontop keeps running unless preempted or error<tolerance
 		return services.ensure_is_on_top.get_result().is_on_top
+	def call_pick_object(self):
+		return service.pick_object()
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -144,7 +148,7 @@ class PICK_OBJECT(abstract_state):
 	def entry(self):
 		print('Picking up object')
 	def exit(self):
-		print('Determining if arm picked up successfully')
+		print('Determining if arm has picked object')
 pick_object = PICK_OBJECT()
 
 """"TRANSITION DEFINITIONS"""
