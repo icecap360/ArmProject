@@ -1,0 +1,5 @@
+float32 neutral_x
+float32 neutral_y
+float32 neutral_z
+float32 lateral_error_tolerance
+float32 camera_offset

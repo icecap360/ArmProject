@@ -4,13 +4,12 @@ import rospy
 
 from control.srv import isMoveComplete
 from control.msg import object_lateral
+from parameter_server import parameter_server
 
 class MoveIt:
 	def __init__(self):
 		#should these 3 neutral params be in parameter server
-		self.neutral_x = 0
-		self.neutral_y = 0
-		self.neutral_z = 0
+		self.neutral_x, self.neutral_y, self.neutral_z = (0,0,0)#parameter_server.get_neutral_pose()
 		self.object_lateral = rospy.Subscriber("object_lateral", object_lateral, self.set_desired_object_coord)
 		self.lateral_move_serv = rospy.Service('lateral_move', isMoveComplete, self.lateral_move)
 	

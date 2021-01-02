@@ -54,6 +54,7 @@ add_message_files(
  FILES
  class_list.msg
  object_lateral.msg
+ arm_parameters.msg
 )
 
 ## Generate services in the 'srv' folder
