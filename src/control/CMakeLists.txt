@@ -65,6 +65,7 @@ add_service_files(
  isMoveComplete.srv
  setTaskComplete.srv
  setObject.srv
+ isObjectPicked.srv
 )
 
 ## Generate actions in the 'action' folder
