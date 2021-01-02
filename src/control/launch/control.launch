@@ -15,7 +15,7 @@
   <node pkg="control" type="user_interface.py" name="desired_classes"
     required="false" output="screen" launch-prefix="gnome-terminal --command"/>
   <!--node pkg="control" type="control_fsm.py" name="control_fsm" respawn="true"/-->
-  <node pkg="control" type="classifier.py" name="classifier"
+  <node pkg="control" type="arm_vision.py" name="arm_vision"
     respawn="true" output="screen"/>
   <node pkg="control" type="is_on_top.py" name="is_on_top" respawn="true"/>
   <node pkg="control" type="move.py" name="move" respawn="true"/>
