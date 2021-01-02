@@ -7,9 +7,11 @@ from control.srv import (
 
 class hasObject:
 	def __init__(self):
-		self.has_object_serv = rospy.Service('is_object_picked', isObjectPicked, self.has_object)
-	def has_object(self):
-		return True 
+		self.update_has_object_serv = rospy.Service('update_has_object', isObjectPicked, self.update_has_object)
+	
+	def update_has_object(self, req):
+		self.has_object = False
+		return self.has_object
 
 if __name__ == '__main__':
     rospy.init_node('has_object', anonymous=True)

@@ -10,7 +10,8 @@ from control.srv import (
 	locateAllObjects,
 	isMoveComplete,
 	setTaskComplete,
-	setObject
+	setObject,
+	isObjectPicked
 )
 import time
 
@@ -43,6 +44,8 @@ class SERVICES:
 		self.ensure_is_on_top.wait_for_server()
 		rospy.wait_for_service('pick_object')
 		self.pick_object = rospy.ServiceProxy('pick_object', isMoveComplete)
+		rospy.wait_for_service('update_has_object')
+		self.update_has_object = rospy.ServiceProxy('update_has_object', isObjectPicked)
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
@@ -64,7 +67,9 @@ class SERVICES:
 		#no point of result, isontop keeps running unless preempted or error<tolerance
 		return services.ensure_is_on_top.get_result().is_on_top
 	def call_pick_object(self):
-		return service.pick_object()
+		return services.pick_object()
+	def call_update_has_object(self):
+		return services.update_has_object().is_object_picked
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -147,7 +152,9 @@ calculate_dimensions = CALCULATE_DIMENSIONS()
 class PICK_OBJECT(abstract_state):
 	def entry(self):
 		print('Picking up object')
+		services.call_pick_object()
 	def exit(self):
+		services.call_update_has_object()
 		print('Determining if arm has picked object')
 pick_object = PICK_OBJECT()
 
