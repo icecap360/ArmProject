@@ -14,6 +14,12 @@ from control.srv import (
 #import time
 
 """HELPERS"""
+def process_do_service(success, fail_msg, succ_msg=None):
+	success = services.call_move_to_neutral_pose()
+	if not success:
+		fail_error(fail_msg)
+	else:
+		print(succ_msg)
 def fail_error(mssg):
 	fail = 'FAIL:'+mssg+', ABORTING'
 	print(fail)
@@ -110,12 +116,10 @@ class abstract_transition:
 class NEUTRAL_POSE(abstract_state):
 	def entry(self):
 		print('Moving arm to neutral pose')
-		success = services.call_move_to_neutral_pose()
-		if not success:
-			fail_msg = 'The arm was unable to move to neutral pose'
-			fail_error(fail_msg)
-		else:
-			print('Arm Ready')
+		process_do_service(
+			services.call_move_to_neutral_pose(),
+			'The arm was unable to move to neutral pose',
+			'Arm Ready')
 	def during(self):
 		print('Holding robot constant')
 	def exit(self):
@@ -125,12 +129,10 @@ neutral_pose = NEUTRAL_POSE()
 class LOCATE_ALL_OBJECT(abstract_state):
 	def entry(self):
 		print('Analysing the current field of objects')
-		success = services.call_locate_all_objects()
-		if not success:
-			fail_msg = 'The arm was unable to analyze the field'
-			fail_error(fail_msg)
-	def exit(self):
-		print('Analysis done')
+		process_do_service(
+			services.call_locate_all_objects(),
+			'The arm was unable to analyze the field',
+			'Analysis done')
 locate_all_object = LOCATE_ALL_OBJECT()
 
 class SET_DESIRED_OBJECT(abstract_state):
@@ -156,10 +158,9 @@ set_desired_object = SET_DESIRED_OBJECT()
 class LATERAL_MOVE(abstract_state):
 	def entry(self):
 		print('Starting lateral move')
-		success = services.call_lateral_move()
-		if not success:
-			fail_msg = 'The arm was unable to move laterally to the top of the desired object'
-			fail_error(fail_msg)
+		process_do_service(
+			services.call_lateral_move(),
+			'The arm was unable to move laterally to the top of the desired object')
 lateral_move = LATERAL_MOVE()
 
 class ENSURE_IS_ON_TOP(abstract_state):
@@ -173,31 +174,39 @@ ensure_is_on_top = ENSURE_IS_ON_TOP()
 class CALCULATE_DIMENSIONS(abstract_state):
 	def entry(self):
 		print('Calculating dimensions of object')
-		success = services.call_calculate_dimension()
-		if not success:
-			fail_msg = 'The arm was unable to calculate dimensions of object'
-			fail_error(fail_msg)
+		process_do_service(
+			services.call_calculate_dimension(),
+			'The arm was unable to calculate dimensions of object',
+			'Object dimensions determined')
 calculate_dimensions = CALCULATE_DIMENSIONS()
 
 class PICK_OBJECT(abstract_state):
 	def entry(self):
 		print('Picking up object')
-		services.call_pick_object()
+		process_do_service(
+			services.call_pick_object(),
+			'The arm was unable to approach the object')
 	def exit(self):
-		services.call_update_has_object()
 		print('Checking if arm has picked the object')
+		process_do_service(
+			services.call_update_has_object(),
+			'The arm was unable to determine if the object is held')
 pick_object = PICK_OBJECT()
 
 class RESTART_PICK_OBJECT(abstract_state):
 	def entry(self):
 		print('Arm was unable to pick up object, trying again...')
-		services.call_restart_pick_object()
+		process_do_service(
+			services.call_restart_pick_object(),
+			'The arm was unable to attempt another pick up')
 restart_pick_object = RESTART_PICK_OBJECT()
 
 class PLACE_OBJECT(abstract_state):
 	def entry(self):
 		print('Placing object at desired coord')
-		services.call_place_object()
+		process_do_service(
+			services.call_place_object(),
+			'The arm was unable to place the object')
 place_object = PLACE_OBJECT()
 
 """"TRANSITION DEFINITIONS"""
