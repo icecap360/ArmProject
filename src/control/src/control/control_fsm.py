@@ -59,17 +59,17 @@ class SERVICES:
 		print('All services Setup')
 	# Defining all services getters
 	def call_move_to_neutral_pose(self):
-		return self.move_to_neutral_pose()
+		return self.move_to_neutral_pose().success
 	def call_is_go(self):
 		return self.is_go().is_go
 	def call_locate_all_objects(self):
-		return self.locate_all_objects()
+		return self.locate_all_objects().success
 	def call_lateral_move(self):
-		return self.lateral_move()
+		return self.lateral_move().success
 	def call_set_task_complete(self):
 		return self.set_task_complete()
 	def call_set_object(self):
-		return self.set_object()
+		return self.set_object().success
 	def call_ensure_is_on_top(self):
 		goal = ensureIsOnTopGoal()
 		self.ensure_is_on_top.send_goal(goal)
@@ -77,19 +77,19 @@ class SERVICES:
 		#no point of result, isontop keeps running unless preempted or error<tolerance
 		return self.ensure_is_on_top.get_result().is_on_top
 	def call_pick_object(self):
-		return self.pick_object()
+		return self.pick_object().success
 	def call_update_has_object(self):
-		return self.update_has_object()
+		return self.update_has_object().success
 	def call_calculate_dimension(self):
-		return self.calculate_dimension()
+		return self.calculate_dimension().success
 	def call_has_object(self):
 		return self.has_object().is_object_picked
 	def call_not_has_object(self):
 		return not self.call_has_object()
 	def call_restart_pick_object(self):
-		return self.restart_pick_object()
+		return self.restart_pick_object().success
 	def call_place_object(self):
-		return self.place_object()
+		return self.place_object().success
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -209,7 +209,6 @@ class default(abstract_transition):
 		return True
 class has_object(abstract_transition):
 	def condition(self):
-		print(services.call_has_object())
 		return services.call_has_object()
 class not_has_object(abstract_transition):
 	def condition(self):
