@@ -8,9 +8,10 @@ from control.srv import (
 class hasObject:
     def __init__(self):
         self.update_has_object_serv = rospy.Service('update_has_object', isObjectPicked, self.update_has_object)
-        self.has_object = 0
+        self.has_object_serv = rospy.Service('has_object', isObjectPicked, self.get_has_object)
+        self.has_object = False
 
-    def get_has_object(self):
+    def get_has_object(self, req=None):
         return self.has_object
     def set_has_object(self, has_object):
         self.has_object = has_object

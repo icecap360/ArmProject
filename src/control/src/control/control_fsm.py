@@ -52,6 +52,8 @@ class SERVICES:
 		self.pick_object = rospy.ServiceProxy('pick_object', isMoveComplete)
 		rospy.wait_for_service('update_has_object')
 		self.update_has_object = rospy.ServiceProxy('update_has_object', isObjectPicked)
+		rospy.wait_for_service('has_object')
+		self.has_object = rospy.ServiceProxy('has_object', isObjectPicked)
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
@@ -70,17 +72,20 @@ class SERVICES:
 		return self.set_object()
 	def call_ensure_is_on_top(self):
 		goal = ensureIsOnTopGoal()
-		services.ensure_is_on_top.send_goal(goal)
-		services.ensure_is_on_top.wait_for_result()
+		self.ensure_is_on_top.send_goal(goal)
+		self.ensure_is_on_top.wait_for_result()
 		#no point of result, isontop keeps running unless preempted or error<tolerance
-		return services.ensure_is_on_top.get_result().is_on_top
+		return self.ensure_is_on_top.get_result().is_on_top
 	def call_pick_object(self):
-		return services.pick_object()
+		return self.pick_object()
 	def call_update_has_object(self):
-		return services.update_has_object().is_object_picked
+		return self.update_has_object().is_object_picked
 	def call_calculate_dimension(self):
 		return self.calculate_dimension()
-	
+	def call_has_object(self):
+		return self.has_object().is_object_picked
+	def call_not_has_object(self):
+		return not self.call_has_object()
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -176,21 +181,33 @@ class PICK_OBJECT(abstract_state):
 		services.call_pick_object()
 	def exit(self):
 		services.call_update_has_object()
-		print('Determining if arm has picked object')
+		print('Checking if arm has picked the object')
 pick_object = PICK_OBJECT()
 
-""""TRANSITION DEFINITIONS"""
+class RESTART_PICK_OBJECT(abstract_state):
+	def entry(self):
+		print('Arm was unable to pick up object, trying again...')
+restart_pick_object = RESTART_PICK_OBJECT()
 
+class PLACE_OBJECT(abstract_state):
+	def entry(self):
+		print('Placing object at desired coord')
+place_object = PLACE_OBJECT()
+
+""""TRANSITION DEFINITIONS"""
 class is_go(abstract_transition):
 	def condition(self):
 		return services.call_is_go()
 class default(abstract_transition):
 	def condition(self):
 		return True
-class transition3(abstract_transition):
+class has_object(abstract_transition):
 	def condition(self):
-		return True
-
+		print(services.call_has_object())
+		return services.call_has_object()
+class not_has_object(abstract_transition):
+	def condition(self):
+		return services.call_not_has_object()
 """THE LOGIC OF THE STATEFLOW STARTS HERE
 THE FINITE STATE MACHINE IS AN ADJACENCY LIST.
 """
@@ -201,5 +218,7 @@ finite_state_machine = {
 	lateral_move : [default(ensure_is_on_top)],
 	ensure_is_on_top : [default(calculate_dimensions)],
 	calculate_dimensions : [default(pick_object)],
-	pick_object : [default(neutral_pose)]
+	pick_object : [has_object(place_object), not_has_object(restart_pick_object)],
+	restart_pick_object : [default(set_desired_object)],
+	place_object : [default(set_desired_object)]
 }
