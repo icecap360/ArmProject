@@ -32,6 +32,8 @@ class SERVICES:
 	#Must initialize services object (in main) before any of the
 	#transitions (which depend on the services) are called.
 	def initialize(self):
+		rospy.wait_for_service('move_to_neutral_pose')
+		self.move_to_neutral_pose = rospy.ServiceProxy('move_to_neutral_pose', moveToNeutralPose)
 		rospy.wait_for_service('is_go')
 		self.is_go = rospy.ServiceProxy('is_go', isGo)
 		rospy.wait_for_service('locate_all_objects')
@@ -50,12 +52,12 @@ class SERVICES:
 		self.pick_object = rospy.ServiceProxy('pick_object', isMoveComplete)
 		rospy.wait_for_service('update_has_object')
 		self.update_has_object = rospy.ServiceProxy('update_has_object', isObjectPicked)
-		rospy.wait_for_service('move_to_neutral_pose')
-		self.move_to_neutral_pose = rospy.ServiceProxy('move_to_neutral_pose', moveToNeutralPose)
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
 	# Defining all services getters
+	def call_move_to_neutral_pose(self):
+		return self.move_to_neutral_pose()
 	def call_is_go(self):
 		return self.is_go().is_go
 	def call_locate_all_objects(self):
@@ -78,8 +80,7 @@ class SERVICES:
 		return services.update_has_object().is_object_picked
 	def call_calculate_dimension(self):
 		return self.calculate_dimension()
-	def call_move_to_neutral_pose(self):
-		return self.move_to_neutral_pose()
+	
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -99,12 +100,13 @@ class abstract_transition:
 """"STATES DEFINITION"""
 class NEUTRAL_POSE(abstract_state):
 	def entry(self):
-		print('Arm Ready')
 		print('Moving arm to neutral pose')
 		success = services.call_move_to_neutral_pose().success
 		if not success:
 			fail_msg = 'The arm was unable to move to neutral pose'
 			fail_error(fail_msg)
+		else:
+			print('Arm Ready')
 	def during(self):
 		print('Holding robot constant')
 	def exit(self):
