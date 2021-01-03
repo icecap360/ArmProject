@@ -62,14 +62,9 @@ add_message_files(
 add_service_files(
  FILES
  isGo.srv
- locateAllObjects.srv
  doService.srv
- isMoveComplete.srv
  setTaskComplete.srv
- setObject.srv
- calculateDim.srv
  isObjectPicked.srv
- moveToNeutralPose.srv
 )
 
 ## Generate actions in the 'action' folder
