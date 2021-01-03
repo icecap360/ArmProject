@@ -2,7 +2,7 @@
 
 import rospy
 from control.msg import class_list, arm_parameters
-from control.srv import isGo, isGoResponse
+from control.srv import isGo
 
 class userInterface:
     def __init__(self):

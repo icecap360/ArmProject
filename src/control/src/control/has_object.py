@@ -2,12 +2,13 @@
 
 import rospy
 from control.srv import (
+    doService, 
     isObjectPicked
 )
 
 class hasObject:
     def __init__(self):
-        self.update_has_object_serv = rospy.Service('update_has_object', isObjectPicked, self.update_has_object)
+        self.update_has_object_serv = rospy.Service('update_has_object', doService, self.update_has_object)
         self.has_object_serv = rospy.Service('has_object', isObjectPicked, self.get_has_object)
         self.has_object = False
 
@@ -19,7 +20,7 @@ class hasObject:
     """ service """
     def update_has_object(self, req):
 		self.set_has_object(False)
-		return self.get_has_object()
+		return True
 
 if __name__ == '__main__':
     rospy.init_node('has_object', anonymous=True)

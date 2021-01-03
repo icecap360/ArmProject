@@ -3,17 +3,17 @@
 import rospy
 from params import get_neutral_pose
 from control.msg import object_lateral, arm_parameters
-from control.srv import isMoveComplete, moveToNeutralPose
+from control.srv import doService, doService
 
 class MoveIt:
 	def __init__(self):
 		#should these 3 neutral params be in parameter server
 		self.object_lateral = rospy.Subscriber("object_lateral", object_lateral, self.set_desired_object_coord)
-		self.move_to_neutral_serv = rospy.Service('move_to_neutral_pose', moveToNeutralPose, self.move_to_neutral_pose)
-		self.lateral_move_serv = rospy.Service('lateral_move', isMoveComplete, self.lateral_move)
-		self.pick_object_serv = rospy.Service('pick_object', isMoveComplete, self.pick_object )
-		self.restart_pick_object_serv = rospy.Service('restart_pick_object', isMoveComplete, self.restart_pick_object )
-		self.place_object_serv = rospy.Service('place_object', isMoveComplete, self.place_object )
+		self.move_to_neutral_serv = rospy.Service('move_to_neutral_pose', doService, self.move_to_neutral_pose)
+		self.lateral_move_serv = rospy.Service('lateral_move', doService, self.lateral_move)
+		self.pick_object_serv = rospy.Service('pick_object', doService, self.pick_object )
+		self.restart_pick_object_serv = rospy.Service('restart_pick_object', doService, self.restart_pick_object )
+		self.place_object_serv = rospy.Service('place_object', doService, self.place_object )
 		self.neutral_x ,  self.neutral_y , self.neutral_z = get_neutral_pose()
 
 	def set_desired_object_coord(self, object_pose):

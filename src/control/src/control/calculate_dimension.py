@@ -2,13 +2,13 @@
 
 import rospy
 from control.msg import object_dimension
-from control.srv import calculateDim
+from control.srv import doService
 
 class calculateDimension:
     def __init__(self):
         # also subsribe to image and pointcloud2 topics
         self.dimension_topic = rospy.Publisher('object_dimension', object_dimension, queue_size=10)
-        self.serv = rospy.Service('calculate_dimension', calculateDim, self.calculate_dimension)
+        self.serv = rospy.Service('calculate_dimension', doService, self.calculate_dimension)
         self.length = 0
         self.width = 0
         self.height = 0

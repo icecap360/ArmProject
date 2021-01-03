@@ -7,13 +7,9 @@ from control.msg import (
 )
 from control.srv import (
 	isGo,
-	locateAllObjects,
-	isMoveComplete,
+	doService,
 	setTaskComplete,
-	setObject,
 	isObjectPicked,
-	calculateDimension,
-	moveToNeutralPose
 )
 #import time
 
@@ -33,31 +29,31 @@ class SERVICES:
 	#transitions (which depend on the services) are called.
 	def initialize(self):
 		rospy.wait_for_service('move_to_neutral_pose')
-		self.move_to_neutral_pose = rospy.ServiceProxy('move_to_neutral_pose', moveToNeutralPose)
+		self.move_to_neutral_pose = rospy.ServiceProxy('move_to_neutral_pose', doService)
 		rospy.wait_for_service('is_go')
 		self.is_go = rospy.ServiceProxy('is_go', isGo)
 		rospy.wait_for_service('locate_all_objects')
-		self.locate_all_objects = rospy.ServiceProxy('locate_all_objects', locateAllObjects)
+		self.locate_all_objects = rospy.ServiceProxy('locate_all_objects', doService)
 		rospy.wait_for_service('lateral_move')
-		self.lateral_move = rospy.ServiceProxy('lateral_move', isMoveComplete)
+		self.lateral_move = rospy.ServiceProxy('lateral_move', doService)
 		rospy.wait_for_service('set_task_complete')
 		self.set_task_complete = rospy.ServiceProxy('set_task_complete', setTaskComplete)
 		rospy.wait_for_service('set_object')
-		self.set_object = rospy.ServiceProxy('set_object', setObject)
+		self.set_object = rospy.ServiceProxy('set_object', doService)
 		self.ensure_is_on_top = actionlib.SimpleActionClient('ensure_is_on_top', ensureIsOnTopAction)
 		self.ensure_is_on_top.wait_for_server()
 		rospy.wait_for_service('calculate_dimension')
-		self.calculate_dimension = rospy.ServiceProxy('calculate_dimension', calculateDimension)
+		self.calculate_dimension = rospy.ServiceProxy('calculate_dimension', doService)
 		rospy.wait_for_service('pick_object')
-		self.pick_object = rospy.ServiceProxy('pick_object', isMoveComplete)
+		self.pick_object = rospy.ServiceProxy('pick_object', doService)
 		rospy.wait_for_service('update_has_object')
-		self.update_has_object = rospy.ServiceProxy('update_has_object', isObjectPicked)
+		self.update_has_object = rospy.ServiceProxy('update_has_object', doService)
 		rospy.wait_for_service('has_object')
 		self.has_object = rospy.ServiceProxy('has_object', isObjectPicked)
 		rospy.wait_for_service('restart_pick_object')
-		self.restart_pick_object = rospy.ServiceProxy('restart_pick_object', isMoveComplete)
+		self.restart_pick_object = rospy.ServiceProxy('restart_pick_object', doService)
 		rospy.wait_for_service('place_object')
-		self.place_object = rospy.ServiceProxy('place_object', isMoveComplete)
+		self.place_object = rospy.ServiceProxy('place_object', doService)
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
@@ -83,7 +79,7 @@ class SERVICES:
 	def call_pick_object(self):
 		return self.pick_object()
 	def call_update_has_object(self):
-		return self.update_has_object().is_object_picked
+		return self.update_has_object()
 	def call_calculate_dimension(self):
 		return self.calculate_dimension()
 	def call_has_object(self):
@@ -114,7 +110,7 @@ class abstract_transition:
 class NEUTRAL_POSE(abstract_state):
 	def entry(self):
 		print('Moving arm to neutral pose')
-		success = services.call_move_to_neutral_pose().success
+		success = services.call_move_to_neutral_pose()
 		if not success:
 			fail_msg = 'The arm was unable to move to neutral pose'
 			fail_error(fail_msg)
@@ -129,7 +125,7 @@ neutral_pose = NEUTRAL_POSE()
 class LOCATE_ALL_OBJECT(abstract_state):
 	def entry(self):
 		print('Analysing the current field of objects')
-		success = services.call_locate_all_objects().is_field_analyzed
+		success = services.call_locate_all_objects()
 		if not success:
 			fail_msg = 'The arm was unable to analyze the field'
 			fail_error(fail_msg)
@@ -151,7 +147,7 @@ class SET_DESIRED_OBJECT(abstract_state):
 					print('No objects left')
 					# add stuff here
 		print('Choosing the next desired object')
-		success = services.call_set_object().success
+		success = services.call_set_object()
 		if not success:
 			fail_msg = 'The arm was unable to set the desired object'
 			fail_error(fail_msg)
@@ -160,7 +156,7 @@ set_desired_object = SET_DESIRED_OBJECT()
 class LATERAL_MOVE(abstract_state):
 	def entry(self):
 		print('Starting lateral move')
-		success = services.call_lateral_move().is_move_complete
+		success = services.call_lateral_move()
 		if not success:
 			fail_msg = 'The arm was unable to move laterally to the top of the desired object'
 			fail_error(fail_msg)
@@ -177,7 +173,7 @@ ensure_is_on_top = ENSURE_IS_ON_TOP()
 class CALCULATE_DIMENSIONS(abstract_state):
 	def entry(self):
 		print('Calculating dimensions of object')
-		success = services.call_calculate_dimension().success
+		success = services.call_calculate_dimension()
 		if not success:
 			fail_msg = 'The arm was unable to calculate dimensions of object'
 			fail_error(fail_msg)

@@ -63,6 +63,7 @@ add_service_files(
  FILES
  isGo.srv
  locateAllObjects.srv
+ doService.srv
  isMoveComplete.srv
  setTaskComplete.srv
  setObject.srv

@@ -2,18 +2,17 @@
 
 import rospy
 from control.srv import (
-    locateAllObjects,
+    doService,
     setTaskComplete,
-    setTaskCompleteResponse,
-    setObject
+    setTaskCompleteResponse
 )
 from control.msg import object_lateral
 
 class armVision:
     def __init__(self):
         self.object_lateral_topic = rospy.Publisher('object_lateral', object_lateral, queue_size=10)
-        self.analyze_serv = rospy.Service('locate_all_objects', locateAllObjects, self.locate_all_objects)
-        self.set_object_serv = rospy.Service('set_object', setObject, self.set_object)
+        self.analyze_serv = rospy.Service('locate_all_objects', doService, self.locate_all_objects)
+        self.set_object_serv = rospy.Service('set_object', doService, self.set_object)
         self.complete_task_serv = rospy.Service('set_task_complete', setTaskComplete, self.set_task_complete)
         self.object_list = []
         self.x = 0
