@@ -54,6 +54,10 @@ class SERVICES:
 		self.update_has_object = rospy.ServiceProxy('update_has_object', isObjectPicked)
 		rospy.wait_for_service('has_object')
 		self.has_object = rospy.ServiceProxy('has_object', isObjectPicked)
+		rospy.wait_for_service('restart_pick_object')
+		self.restart_pick_object = rospy.ServiceProxy('restart_pick_object', isMoveComplete)
+		rospy.wait_for_service('place_object')
+		self.place_object = rospy.ServiceProxy('place_object', isMoveComplete)
 		self.initialize_complete()
 	def initialize_complete(self):
 		print('All services Setup')
@@ -86,6 +90,10 @@ class SERVICES:
 		return self.has_object().is_object_picked
 	def call_not_has_object(self):
 		return not self.call_has_object()
+	def call_restart_pick_object(self):
+		return self.restart_pick_object()
+	def call_place_object(self):
+		return self.place_object()
 services = SERVICES()
 
 """ABSTRACT STATES AND TRANSITIONS"""
@@ -187,11 +195,13 @@ pick_object = PICK_OBJECT()
 class RESTART_PICK_OBJECT(abstract_state):
 	def entry(self):
 		print('Arm was unable to pick up object, trying again...')
+		services.call_restart_pick_object()
 restart_pick_object = RESTART_PICK_OBJECT()
 
 class PLACE_OBJECT(abstract_state):
 	def entry(self):
 		print('Placing object at desired coord')
+		services.call_place_object()
 place_object = PLACE_OBJECT()
 
 """"TRANSITION DEFINITIONS"""
