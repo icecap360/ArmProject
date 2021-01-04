@@ -13,13 +13,13 @@ def callback(ros_cloud):
             ros_cloud (PointCloud2): ROS PointCloud2 message
 
         Returns:
-            pcl.PointCloud_PointXYZRGB: PCL XYZRGB point cloud
+            xyzrgb numpy array
     """
-    points_list = []
-    
-    print(ros_numpy.point_cloud2.split_rgb_field(ros_cloud) )
-    print(ros_numpy.point_cloud2.pointcloud2_to_xyz_array(ros_cloud))
-    
+    ros_cloud_arr = ros_numpy.point_cloud2.pointcloud2_to_array(ros_cloud) 
+    xyz = ros_numpy.point_cloud2.get_xyz_points(ros_cloud_arr)
+    rgb = ros_numpy.point_cloud2.split_rgb_field(ros_cloud_arr)[['r','g','b']]
+    print(xyz.shape)
+    print(rgb)
 def listener():
     # In ROS, nodes are uniquely named. If two nodes with the same
     # name are launched, the previous one is kicked off. The
