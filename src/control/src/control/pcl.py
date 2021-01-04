@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import rospy
-import pcl
 from sensor_msgs.msg import PointCloud2
 import sensor_msgs.point_cloud2 as pc2
 import ros_numpy
@@ -8,11 +7,10 @@ import numpy as np
 from sensor_msgs.msg import Image
 import numpy.lib.recfunctions as rf
 
-print(dir(rf))
 
 class pointCloudPCL:
     def __init__(self):
-        self.image_pub = rospy.Publisher('depth_image', Image, queue_size=10)
+        self.image_pub = rospy.Publisher('arm_vision_image', Image, queue_size=10)
     def pointCloudToXYZRGB(self, ros_cloud):
         """ Converts a ROS PointCloud2 message to a pcl PointXYZRGB
 
@@ -24,14 +22,14 @@ class pointCloudPCL:
         """
         ros_cloud_arr = ros_numpy.point_cloud2.pointcloud2_to_array(ros_cloud) 
         xyz = ros_numpy.point_cloud2.get_xyz_points(ros_cloud_arr)
-        rgb = ros_numpy.point_cloud2.split_rgb_field(ros_cloud_arr)[['r','g','b']]
+        rgb = ros_numpy.point_cloud2.split_rgb_field(ros_cloud_arr)
+        print(xyz.shape)
         r = rgb['r']
         g = rgb['g']
         b=rgb['b']
-        img = np.array([r,g,b]) #shape is 3,480,680
-        img = np.moveaxis(img, 0,2)
-        print(img.shape)
-        #better alternative: rf.structured_to_unstructured(rgb)
+        img = np.array([r,g,b]) #shape is 3,480,640
+        img = np.moveaxis(img, 0,2) #shape is 480,640,3
+        #better alternative: rf.structured_to_unstructured(rgb), look into it
         self.image_pub.publish(
             ros_numpy.image.numpy_to_image(
                 img, "rgb8"))
