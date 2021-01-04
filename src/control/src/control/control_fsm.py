@@ -8,14 +8,14 @@ from control.msg import (
 from control.srv import (
 	isGo,
 	doService,
-	setTaskComplete,
+	isTaskEmpty,
 	isObjectPicked,
 )
 #import time
 
 """HELPERS"""
 def process_do_service(success, fail_msg, succ_msg=None):
-	success = services.call_move_to_neutral_pose()
+	#success = services.call_move_to_neutral_pose()
 	if not success:
 		fail_error(fail_msg)
 	else:
@@ -43,7 +43,9 @@ class SERVICES:
 		rospy.wait_for_service('lateral_move')
 		self.lateral_move = rospy.ServiceProxy('lateral_move', doService)
 		rospy.wait_for_service('set_task_complete')
-		self.set_task_complete = rospy.ServiceProxy('set_task_complete', setTaskComplete)
+		self.set_task_complete = rospy.ServiceProxy('set_task_complete', doService)
+		rospy.wait_for_service('is_task_empty')
+		self.is_task_empty = rospy.ServiceProxy('is_task_empty', isTaskEmpty)
 		rospy.wait_for_service('set_object')
 		self.set_object = rospy.ServiceProxy('set_object', doService)
 		self.ensure_is_on_top = actionlib.SimpleActionClient('ensure_is_on_top', ensureIsOnTopAction)
@@ -72,8 +74,14 @@ class SERVICES:
 		return self.locate_all_objects().success
 	def call_lateral_move(self):
 		return self.lateral_move().success
+	#
 	def call_set_task_complete(self):
-		return self.set_task_complete()
+		return self.set_task_complete().success
+	def call_is_task_empty(self):
+		return self.is_task_empty().is_empty
+	def call_not_is_task_empty(self):
+		return not self.call_is_task_empty()
+
 	def call_set_object(self):
 		return self.set_object().success
 	def call_ensure_is_on_top(self):
@@ -138,17 +146,17 @@ locate_all_object = LOCATE_ALL_OBJECT()
 class SET_DESIRED_OBJECT(abstract_state):
 	def entry(self):
 		# change condition for running
-		if True:
-			print('Setting object as complete')
-			task_resp = services.call_set_task_complete()
-			if not task_resp.success:
-				fail_msg = 'The arm could not set the task as complete'
-				fail_error(fail_msg)
-			else:
-				if task_resp.is_empty:
-					print('No objects left')
-					# add stuff here
-		print('Choosing the next desired object')
+		# if True:
+		# 	print('Setting object as complete')
+		# 	task_resp = services.call_set_task_complete()
+		# 	if not task_resp.success:
+		# 		fail_msg = 'The arm could not set the task as complete'
+		# 		fail_error(fail_msg)
+		# 	else:
+		# 		if task_resp.is_empty:
+		# 			print('No objects left')
+		# 			# add stuff here
+		print('Updating the desired object')
 		success = services.call_set_object()
 		if not success:
 			fail_msg = 'The arm was unable to set the desired object'
@@ -207,6 +215,11 @@ class PLACE_OBJECT(abstract_state):
 		process_do_service(
 			services.call_place_object(),
 			'The arm was unable to place the object')
+	def exit(self):
+		print('Setting task as complete')
+		process_do_service(
+			services.call_set_task_complete(),
+			'The arm was unable to set the task as complete')
 place_object = PLACE_OBJECT()
 
 """"TRANSITION DEFINITIONS"""
@@ -222,6 +235,12 @@ class has_object(abstract_transition):
 class not_has_object(abstract_transition):
 	def condition(self):
 		return services.call_not_has_object()
+class is_task_empty(abstract_transition):
+	def condition(self):
+		return services.call_is_task_empty()
+class not_is_task_empty(abstract_transition):
+	def condition(self):
+		return services.call_not_is_task_empty()
 """THE LOGIC OF THE STATEFLOW STARTS HERE
 THE FINITE STATE MACHINE IS AN ADJACENCY LIST.
 """
@@ -234,5 +253,5 @@ finite_state_machine = {
 	calculate_dimensions : [default(pick_object)],
 	pick_object : [has_object(place_object), not_has_object(restart_pick_object)],
 	restart_pick_object : [default(set_desired_object)],
-	place_object : [default(set_desired_object)]
+	place_object : [is_task_empty(neutral_pose), not_is_task_empty(set_desired_object)]
 }

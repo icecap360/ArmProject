@@ -2,7 +2,7 @@
 
 import rospy
 from control.srv import (
-    doService, 
+    doService,
     isObjectPicked
 )
 
@@ -19,7 +19,7 @@ class hasObject:
 
     """ service """
     def update_has_object(self, req):
-		self.set_has_object(False)
+		self.set_has_object(True)
 		return True
 
 if __name__ == '__main__':
