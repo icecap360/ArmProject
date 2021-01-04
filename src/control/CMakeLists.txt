@@ -9,6 +9,7 @@ project(control)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rospy
+  roscpp
   std_msgs
   message_generation
   genmsg
@@ -142,6 +143,8 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/control_node.cpp)
+add_executable(pcl_point_cloud ${PROJECT_SOURCE_DIR}/pcl_point_cloud.cpp)
+target_link_libraries(pcl_point_cloud ${catkin_LIBRARIES})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
