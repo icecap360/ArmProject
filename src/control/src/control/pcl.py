@@ -20,8 +20,8 @@ class pointCloudPCL:
             Returns:
                 xyzrgb numpy array
         """
-        ros_cloud_arr = ros_numpy.point_cloud2.pointcloud2_to_array(ros_cloud) 
-        xyz = ros_numpy.point_cloud2.get_xyz_points(ros_cloud_arr)
+        ros_cloud_arr = ros_numpy.point_cloud2.pointcloud2_to_array(ros_cloud)
+        xyz = ros_numpy.point_cloud2.get_xyz_points(ros_cloud_arr, remove_nans=False)
         rgb = ros_numpy.point_cloud2.split_rgb_field(ros_cloud_arr)
         print(xyz.shape)
         r = rgb['r']
@@ -49,4 +49,3 @@ def listener():
 
 if __name__ == '__main__':
     listener()
-
