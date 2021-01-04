@@ -64,7 +64,7 @@ add_service_files(
  FILES
  isGo.srv
  doService.srv
- setTaskComplete.srv
+ isTaskEmpty.srv
  isObjectPicked.srv
 )
 
