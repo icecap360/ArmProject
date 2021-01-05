@@ -20,6 +20,7 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/filters/project_inliers.h>
 #include <pcl/surface/concave_hull.h>
+#include <pcl_ros/point_cloud.h>
 
 uint32_t queue_size = 1;
 class pointClouodSegmenter;
@@ -185,7 +186,7 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
     std::cout<<"Centroid of this cluster: x "<<
     centroid[0] << " y " << 
     centroid[1] << " z " << 
-    centroid[2] << '\n';
+    centroid[2] << " size "<<centroid.size()<<'\n';
 
 
     // std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
