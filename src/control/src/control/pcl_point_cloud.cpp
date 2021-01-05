@@ -38,4 +38,3 @@ int main(int argc, char** argv) {
    	ROS_INFO("Node Subscribed");
 
 	   ros::spin();
-}
