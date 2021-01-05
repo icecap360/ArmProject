@@ -8,25 +8,29 @@ uint32_t queue_size = 1;
 
 class pointCloudSegmenter{
 	public:  
-		int a;
-		pointCloudSegmenter(int);
+		bool execute;
+		pointCloudSegmenter();
 		void callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
 };
-pointCloudSegmenter::pointCloudSegmenter (int aq) {
-	a = aq;
-	std::cout << a;
+pointCloudSegmenter::pointCloudSegmenter () {
+	execute = true;
 }
-pointCloudSegmenter pcs = pointCloudSegmenter(5);
+pointCloudSegmenter pcs = pointCloudSegmenter();
 
 // std::string topic = nh.resolveName("point_cloud");
 // //void callback(const sensor_msgs::PointCloud2ConstPtr&);
 void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
-	ROS_INFO( "%d", pcs.a);
+	if (!execute) {
+		return;
+	}
+	ROS_INFO( "Converting pointcloud2 to pcl_poinctcloud xyz");
     pcl::PCLPointCloud2 pcl_pc2;
-//     pcl_conversions::toPCL(*input,pcl_pc2);
-//     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-//     pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
-//     //do stuff with temp_cloud here
+    pcl_conversions::toPCL(*input,pcl_pc2);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
+    execute = false;
+	ROS_INFO("Executed callback, will not execute callback again");
+	// do stuff with temp_cloud here
 }
 int main(int argc, char** argv) {
    	ros::init(argc, argv, "pcl_node");
@@ -36,5 +40,5 @@ int main(int argc, char** argv) {
 		"/camera/depth/points", queue_size, 
 		&pointCloudSegmenter::callback, &pcs);
    	ROS_INFO("Node Subscribed");
-
-	   ros::spin();
+	ros::spin();
+}
