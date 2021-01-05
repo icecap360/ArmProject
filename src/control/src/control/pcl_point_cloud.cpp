@@ -36,22 +36,12 @@ pointCloudSegmenter pcs = pointCloudSegmenter(5);
 // //void callback(const sensor_msgs::PointCloud2ConstPtr&);
 void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
 	ROS_INFO( "%d", pcs.a);
-    pcl::PCLPointCloud2 pcl_pc2;
+  pcl::PCLPointCloud2 pcl_pc2;
 //     pcl_conversions::toPCL(*input,pcl_pc2);
 //     pcl::PointCloud<pcl::PointXYZRGB>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 //     pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
 //     //do stuff with temp_cloud here
-<<<<<<< HEAD
-int main(int argc, char** argv) {
-   	ros::init(argc, argv, "pcl_node");
-	ros::NodeHandle nh;
-	ROS_INFO("Node initialize");
-	ros::Subscriber sub = nh.subscribe<sensor_msgs::PointCloud2> (
-		"/camera/depth/points", queue_size,
-		&pointCloudSegmenter::callback, &pcs);
-   	ROS_INFO("Node Subscribed");
-
-	   ros::spin();
+}
 
 int segment ()
 {
@@ -140,4 +130,17 @@ int segment ()
   }
 
   return (0);
+}
+
+
+int main(int argc, char** argv) {
+  ros::init(argc, argv, "pcl_node");
+	ros::NodeHandle nh;
+	ROS_INFO("Node initialize");
+	ros::Subscriber sub = nh.subscribe<sensor_msgs::PointCloud2> (
+		"/camera/depth/points", queue_size,
+		&pointCloudSegmenter::callback, &pcs);
+   	ROS_INFO("Node Subscribed");
+
+	 ros::spin();
 }
