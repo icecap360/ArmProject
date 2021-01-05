@@ -15,13 +15,18 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
+// hull
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/filters/project_inliers.h>
+#include <pcl/surface/concave_hull.h>
 
 uint32_t queue_size = 1;
 class pointClouodSegmenter;
 int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 
 class pointCloudSegmenter{
-	public:  
+	public:
 		bool execute;
 		pointCloudSegmenter();
 		void callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
@@ -62,7 +67,7 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
   pcl::VoxelGrid<pcl::PointXYZ> vg;
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
   vg.setInputCloud (cloud);
-  vg.setLeafSize (0.01f, 0.01f, 0.01f);
+  vg.setLeafSize (0.001f, 0.001f, 0.001f);
   vg.filter (*cloud_filtered);
   std::cout << "PointCloud after filtering has: " << cloud_filtered->size ()  << " data points." << std::endl; //*
 
@@ -118,21 +123,71 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
   ec.setSearchMethod (tree);
   ec.setInputCloud (cloud_filtered);
   ec.extract (cluster_indices);
+	//std::cout << "\n" << cluster_indices.size() << '\n';
 
   int j = 0;
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-    for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
+    for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit) {
+			// std::cout << *pit << '\n';
       cloud_cluster->push_back ((*cloud_filtered)[*pit]); //*
+		}
+
+		// *********** hull construction *****************
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected (new pcl::PointCloud<pcl::PointXYZ>);
+
+		pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+	  pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+	  // Create the segmentation object
+	  pcl::SACSegmentation<pcl::PointXYZ> seg;
+	  // Optional
+	  seg.setOptimizeCoefficients (true);
+	  // Mandatory
+	  seg.setModelType (pcl::SACMODEL_PLANE);
+	  seg.setMethodType (pcl::SAC_RANSAC);
+	  seg.setDistanceThreshold (0.01);
+
+	  seg.setInputCloud (cloud_filtered);
+	  seg.segment (*inliers, *coefficients);
+	  std::cerr << "PointCloud after segmentation has: "
+	            << inliers->indices.size () << " inliers." << std::endl;
+
+	  // Project the model inliers
+	  pcl::ProjectInliers<pcl::PointXYZ> proj;
+	  proj.setModelType (pcl::SACMODEL_PLANE);
+	  // proj.setIndices (inliers);
+	  proj.setInputCloud (cloud_filtered);
+	  proj.setModelCoefficients (coefficients);
+	  proj.filter (*cloud_projected);
+	  std::cerr << "PointCloud after projection has: "
+	            << cloud_projected->size () << " data points." << std::endl;
+
+		// Create a Concave Hull representation of the projected inliers
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZ>);
+		pcl::ConcaveHull<pcl::PointXYZ> chull;
+		chull.setInputCloud (cloud_projected);
+		chull.setAlpha (0.1);
+		chull.reconstruct (*cloud_hull);
+		// *************** end ******************************
+
+
     cloud_cluster->width = cloud_cluster->size ();
     cloud_cluster->height = 1;
     cloud_cluster->is_dense = true;
 
-    std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
+		cloud_hull->width = cloud_hull->size ();
+    cloud_hull->height = 1;
+    cloud_hull->is_dense = true;
+
+    // std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
+    // std::stringstream ss;
+    // ss << "cloud_cluster_" << j << ".pcd";
+    // writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
+		std::cout << "PointCloud representing the Cluster: " << cloud_hull->size () << " data points." << std::endl;
     std::stringstream ss;
-    ss << "cloud_cluster_" << j << ".pcd";
-    writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
+    ss << "cloud_hull_" << j << ".pcd";
+    writer.write<pcl::PointXYZ> (ss.str (), *cloud_hull, false); //*
     j++;
   }
 
