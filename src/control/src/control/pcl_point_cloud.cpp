@@ -17,6 +17,8 @@
 #include <pcl/segmentation/extract_clusters.h>
 
 uint32_t queue_size = 1;
+class pointClouodSegmenter;
+int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 
 class pointCloudSegmenter{
 	public:  
@@ -43,17 +45,18 @@ void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::Po
     pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
     execute = false;
-	ROS_INFO("Executed callback, will not execute callback again");
+  	ROS_INFO( "temp_cloud has: %d size ", temp_cloud->size());
+
+	int status = segment(temp_cloud);
+	ROS_INFO("Finished executed callback, will not execute callback again!");
 	// do stuff with temp_cloud here
 }
 
-int segment ()
+int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
 {
   // Read in the cloud data
   pcl::PCDReader reader;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>), cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
-  reader.read ("table_scene_lms400.pcd", *cloud);
-  std::cout << "PointCloud before filtering has: " << cloud->size () << " data points." << std::endl; //*
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
 
   // Create the filtering object: downsample the dataset using a leaf size of 1cm
   pcl::VoxelGrid<pcl::PointXYZ> vg;
