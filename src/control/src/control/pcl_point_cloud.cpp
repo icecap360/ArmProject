@@ -180,6 +180,14 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
     cloud_hull->height = 1;
     cloud_hull->is_dense = true;
 
+    Eigen::Vector4f centroid;
+    pcl::compute3DCentroid(*cloud_hull,centroid);
+    std::cout<<"Centroid of this cluster: x "<<
+    centroid[0] << " y " << 
+    centroid[1] << " z " << 
+    centroid[2] << '\n';
+
+
     // std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
     // std::stringstream ss;
     // ss << "cloud_cluster_" << j << ".pcd";
