@@ -57,6 +57,46 @@ void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::Po
 	// do stuff with temp_cloud here
 }
 
+pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered) {
+	// *********** hull construction *****************
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected (new pcl::PointCloud<pcl::PointXYZ>);
+
+	pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+	pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+	// Create the segmentation object
+	pcl::SACSegmentation<pcl::PointXYZ> seg;
+	// Optional
+	seg.setOptimizeCoefficients (true);
+	// Mandatory
+	seg.setModelType (pcl::SACMODEL_PLANE);
+	seg.setMethodType (pcl::SAC_RANSAC);
+	seg.setDistanceThreshold (0.01);
+
+	seg.setInputCloud (cloud_filtered);
+	seg.segment (*inliers, *coefficients);
+	std::cerr << "PointCloud after segmentation has: "
+						<< inliers->indices.size () << " inliers." << std::endl;
+
+	// Project the model inliers
+	pcl::ProjectInliers<pcl::PointXYZ> proj;
+	proj.setModelType (pcl::SACMODEL_PLANE);
+	// proj.setIndices (inliers);
+	proj.setInputCloud (cloud_filtered);
+	proj.setModelCoefficients (coefficients);
+	proj.filter (*cloud_projected);
+	std::cerr << "PointCloud after projection has: "
+						<< cloud_projected->size () << " data points." << std::endl;
+
+	// Create a Concave Hull representation of the projected inliers
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::ConcaveHull<pcl::PointXYZ> chull;
+	chull.setInputCloud (cloud_projected);
+	chull.setAlpha (0.01);
+	chull.reconstruct (*cloud_hull);
+	// *************** end ******************************
+	return cloud_hull;
+}
+
 int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
 {
   // Read in the cloud data
@@ -134,42 +174,7 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
       cloud_cluster->push_back ((*cloud_filtered)[*pit]); //*
 		}
 
-		// *********** hull construction *****************
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected (new pcl::PointCloud<pcl::PointXYZ>);
-
-		pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-	  pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-	  // Create the segmentation object
-	  pcl::SACSegmentation<pcl::PointXYZ> seg;
-	  // Optional
-	  seg.setOptimizeCoefficients (true);
-	  // Mandatory
-	  seg.setModelType (pcl::SACMODEL_PLANE);
-	  seg.setMethodType (pcl::SAC_RANSAC);
-	  seg.setDistanceThreshold (0.01);
-
-	  seg.setInputCloud (cloud_filtered);
-	  seg.segment (*inliers, *coefficients);
-	  std::cerr << "PointCloud after segmentation has: "
-	            << inliers->indices.size () << " inliers." << std::endl;
-
-	  // Project the model inliers
-	  pcl::ProjectInliers<pcl::PointXYZ> proj;
-	  proj.setModelType (pcl::SACMODEL_PLANE);
-	  // proj.setIndices (inliers);
-	  proj.setInputCloud (cloud_filtered);
-	  proj.setModelCoefficients (coefficients);
-	  proj.filter (*cloud_projected);
-	  std::cerr << "PointCloud after projection has: "
-	            << cloud_projected->size () << " data points." << std::endl;
-
-		// Create a Concave Hull representation of the projected inliers
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZ>);
-		pcl::ConcaveHull<pcl::PointXYZ> chull;
-		chull.setInputCloud (cloud_projected);
-		chull.setAlpha (0.1);
-		chull.reconstruct (*cloud_hull);
-		// *************** end ******************************
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull = concave_hull(cloud_filtered);
 
 
     cloud_cluster->width = cloud_cluster->size ();
