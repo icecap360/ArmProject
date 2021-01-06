@@ -21,7 +21,7 @@
 #include <pcl/filters/project_inliers.h>
 #include <pcl/surface/concave_hull.h>
 #include <pcl_ros/point_cloud.h>
-
+#include <control/cluster_points.h>
 uint32_t queue_size = 1;
 class pointClouodSegmenter;
 int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
@@ -29,7 +29,7 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 class pointCloudSegmenter{
 	public:
     ros::NodeHandle nh;
-    //ros::Publisher pub;
+    ros::Publisher pub;
     ros::Subscriber sub;
 		bool execute;
 		pointCloudSegmenter();
@@ -37,7 +37,7 @@ class pointCloudSegmenter{
 };
 pointCloudSegmenter::pointCloudSegmenter () {
 	execute = true;
-  //pub = NULL;
+  pub = nh.advertise<control::cluster_points>("cloud_hull", 10);
   sub = nh.subscribe<sensor_msgs::PointCloud2> (
 		"/camera/depth/points", queue_size,
 		&pointCloudSegmenter::callback, this);
