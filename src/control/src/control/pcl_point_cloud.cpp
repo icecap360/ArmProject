@@ -24,7 +24,6 @@
 #include <control/cluster_points.h>
 uint32_t queue_size = 1;
 class pointClouodSegmenter;
-int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 
 class pointCloudSegmenter{
 	public:
@@ -34,7 +33,11 @@ class pointCloudSegmenter{
 		bool execute;
 		pointCloudSegmenter();
 		void callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
+		int segment(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
+
 };
+// constructor
 pointCloudSegmenter::pointCloudSegmenter () {
 	execute = true;
   pub = nh.advertise<control::cluster_points>("cloud_hull", 10);
@@ -44,9 +47,6 @@ pointCloudSegmenter::pointCloudSegmenter () {
    	ROS_INFO("Node Subscribed");
 }
 
-// ros::NodeHandle nh;
-// std::string topic = nh.resolveName("point_cloud");
-// //void callback(const sensor_msgs::PointCloud2ConstPtr&);
 void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
 	if (!execute) {
 		return;
@@ -64,8 +64,9 @@ void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::Po
 	// do stuff with temp_cloud here
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered) {
-	// *********** hull construction *****************
+pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::concave_hull (
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered)
+	{
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected (new pcl::PointCloud<pcl::PointXYZ>);
 
 	pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
@@ -98,13 +99,17 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::ConcaveHull<pcl::PointXYZ> chull;
 	chull.setInputCloud (cloud_projected);
+	// change alpha for edge precision
+	// smaller for more precision
 	chull.setAlpha (0.01);
 	chull.reconstruct (*cloud_hull);
-	// *************** end ******************************
+
 	return cloud_hull;
 }
 
-int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){
+int pointCloudSegmenter::segment (
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+	{
   // Read in the cloud data
   pcl::PCDReader reader;
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
@@ -197,11 +202,10 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){
     cloud_hull->is_dense = true;
 
     Eigen::Vector4f centroid;
-    pcl::compute3DCentroid(*cloud_hull,centroid);
-    std::cout<<"Centroid of this cluster: x "<<
-    centroid[0] << " y " << 
-    centroid[1] << " z " <<
-    centroid[2] << '\n';
+		//pcl::compute3DCentroid<pcl::PointXYZ, Eigen::Vector4f> centroid_compute;
+    std::cout<<"points used "<<pcl::compute3DCentroid(*cloud_hull,centroid)<<'\n';
+		//centroid_compute.compute3DCentroid(cloud_hull, centroid);
+    std::cout<<"Centroid of this cluster: x "<<end_cluster<< '\n';
     float centroid_x =centroid[0], centroid_y=centroid[1];
 
     cent_x.push_back(centroid_x);
@@ -234,6 +238,6 @@ int main(int argc, char** argv) {
   ros::init(argc, argv, "pcl_node");
 	pointCloudSegmenter pcs = pointCloudSegmenter();
 	ROS_INFO("Node initialize");
-	
+
 	ros::spin();
 }
