@@ -42,7 +42,7 @@ class pointCloudSegmenter{
     //  const boost::shared_ptr<const control::doService::Request> &res,
     //  const boost::shared_ptr<const control::doService::Response> &req);
     pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
-		
+
     pcl::PointCloud<pcl::PointXYZ>::Ptr downsample (
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 			float downsampleSize);
@@ -55,7 +55,7 @@ class pointCloudSegmenter{
 		pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
 			float hullAlpha);
-		
+
     void segment_and_publish(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 			float downsampleSize, float planeTolerance,
 			float clusterTolerance, float hullAlpha);
@@ -269,10 +269,10 @@ void pointCloudSegmenter::segment_and_publish (
 		cloud_hull->width = cloud_hull->size ();
     cloud_hull->height = 1;
     cloud_hull->is_dense = true;
-    
+
     //computing the centroid
     Eigen::Vector4f centroid;
-    pcl::compute3DCentroid(*cloud_hull,centroid);    
+    pcl::compute3DCentroid(*cloud_hull,centroid);
     float centroid_x =centroid[0], centroid_y=centroid[1];
 
     //updating the msg data
@@ -293,14 +293,14 @@ void pointCloudSegmenter::segment_and_publish (
     ss << "cloud_hull_" << j << ".pcd";
     writer.write<pcl::PointXYZ> (ss.str (), *cloud_hull, false);
     j++;
-    
+
   }
   // creating the msg from the vectors and sending it
   control::cluster_points msg;
   msg.hull_x = x;
   msg.hull_y = y;
-  msg.centroid_x = cent_x;
-  msg.centroid_y = cent_y;
+  // msg.centroid_x = cent_x;
+  // msg.centroid_y = cent_y;
   pub.publish(msg);
   std::cout <<"XYCentroid topics updated \n";
 }
