@@ -23,21 +23,38 @@
 #include <pcl_ros/point_cloud.h>
 #include <control/cluster_points.h>
 uint32_t queue_size = 1;
-class pointClouodSegmenter;
+class pointCloudSegmenter;
 
 class pointCloudSegmenter{
 	public:
     ros::NodeHandle nh;
     ros::Publisher pub;
     ros::Subscriber sub;
-    ros::ServiceServer serv;
+    //ros::ServiceServer serv;
 		bool go_segment_and_publish;
 		pointCloudSegmenter();
 		void callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
-		bool serv_callback(const boost::shared_ptr<const control::cluster_points::Request>& req,
-         const boost::shared_ptr<const control::cluster_points::Response>& res);
+		
+    //bool serv_callback(const boost::shared_ptr<const control::cluster_points::Request>& req,
+    //     const boost::shared_ptr<const control::cluster_points::Response>& res);
     pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
-		void segment_and_publish(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
+		
+    pcl::PointCloud<pcl::PointXYZ>::Ptr downsample (
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+			float downsampleSize);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr removePlane (
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
+			float planeTolerance);
+		std::vector<pcl::PointIndices> cluster (
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
+			float clusterTolerance);
+		pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (
+			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
+			float hullAlpha);
+		
+    void segment_and_publish(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+			float downsampleSize, float planeTolerance,
+			float clusterTolerance, float hullAlpha);
 
 };
 // constructor
@@ -48,9 +65,9 @@ pointCloudSegmenter::pointCloudSegmenter () {
 		"/camera/depth/points", queue_size,
 		&pointCloudSegmenter::callback, this);
    	ROS_INFO("Node Subscribed");
-  serv = nh.advertiseService("get_hulls", pointCloudSegmenter::serv_callback, this);
+  //serv = nh.advertiseService("get_hulls", pointCloudSegmenter::serv_callback, this);
 }
-
+// callback
 void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
 	if (!go_segment_and_publish) {
 		return;
@@ -63,14 +80,100 @@ void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::Po
   go_segment_and_publish = false;
   std::cout<<"temp_cloud has: "<< temp_cloud->size() <<" size ";
 
-	segment_and_publish(temp_cloud);
-	std::cout<<"Finished executed callback, will not execute callback again!";
+	segment_and_publish(temp_cloud, 0.01f, 0.02, 0.03, 0.01);
+	std::cout<<"Finished executed callback, will not execute callback again!"<<'\n';
 	// do stuff with temp_cloud here
 }
 
-pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::concave_hull (
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered)
+// voxel downsample
+pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::downsample (
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+	float downsampleSize)
+{
+	// Create the filtering object: downsample the dataset using a leaf size of downsampleSize (m)
+  pcl::VoxelGrid<pcl::PointXYZ> vg;
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
+  vg.setInputCloud (cloud);
+  vg.setLeafSize (downsampleSize, downsampleSize, downsampleSize);
+  vg.filter (*cloud_filtered);
+  std::cout << "PointCloud after filtering has: " << cloud_filtered->size ()  << " data points." << std::endl; //*
+	return cloud_filtered;
+}
+
+// removes main plane
+pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::removePlane (
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
+	float planeTolerance)
+{
+	// Create the segmentation object for the planar model and set all the parameters
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::SACSegmentation<pcl::PointXYZ> seg;
+  pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+  pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZ> ());
+  seg.setOptimizeCoefficients (true);
+  seg.setModelType (pcl::SACMODEL_PLANE);
+  seg.setMethodType (pcl::SAC_RANSAC);
+  seg.setMaxIterations (100);
+  seg.setDistanceThreshold (planeTolerance);
+
+  int i=0, nr_points = (int) cloud_filtered->size ();
+  while (cloud_filtered->size () > 0.3 * nr_points)
+  {
+    // Segment the largest planar component from the remaining cloud
+    seg.setInputCloud (cloud_filtered);
+    seg.segment (*inliers, *coefficients);
+    if (inliers->indices.size () == 0)
+    {
+      std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
+      break;
+    }
+
+    // Extract the planar inliers from the input cloud
+    pcl::ExtractIndices<pcl::PointXYZ> extract;
+    extract.setInputCloud (cloud_filtered);
+    extract.setIndices (inliers);
+    extract.setNegative (false);
+
+    // Get the points associated with the planar surface
+    extract.filter (*cloud_plane);
+    std::cout << "PointCloud representing the planar component: " << cloud_plane->size () << " data points." << std::endl;
+
+    // Remove the planar inliers, extract the rest
+    extract.setNegative (true);
+    extract.filter (*cloud_f);
+    *cloud_filtered = *cloud_f;
+  }
+	return cloud_filtered;
+}
+
+// cluster points using KdTree and GNN
+std::vector<pcl::PointIndices> pointCloudSegmenter::cluster (
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
+	float clusterTolerance)
 	{
+		// Creating the KdTree object for the search method of the extraction
+	  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+	  tree->setInputCloud (cloud_filtered);
+
+	  std::vector<pcl::PointIndices> cluster_indices;
+	  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+	  ec.setClusterTolerance (clusterTolerance);
+	  ec.setMinClusterSize (100);
+	  ec.setMaxClusterSize (25000);
+	  ec.setSearchMethod (tree);
+	  ec.setInputCloud (cloud_filtered);
+	  ec.extract (cluster_indices);
+
+		return cluster_indices;
+}
+
+// constructs 2D concave hull
+pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::concave_hull (
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
+	float hullAlpha)
+	{
+	// projects points onto plane before computing hull
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected (new pcl::PointCloud<pcl::PointXYZ>);
 
 	pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
@@ -105,81 +208,30 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::concave_hull (
 	chull.setInputCloud (cloud_projected);
 	// change alpha for edge precision
 	// smaller for more precision
-	chull.setAlpha (0.01);
+	chull.setAlpha (hullAlpha);
 	chull.reconstruct (*cloud_hull);
 
 	return cloud_hull;
 }
 
+// main segmenter
+// tolerances are in m units
 void pointCloudSegmenter::segment_and_publish (
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+	float downsampleSize, float planeTolerance,
+	float clusterTolerance, float hullAlpha)
 	{
-  // Read in the cloud data
-  pcl::PCDReader reader;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
+  // pcl clusters later saved into files
+	pcl::PCDWriter writer;
 
-  // Create the filtering object: downsample the dataset using a leaf size of 1cm
-  pcl::VoxelGrid<pcl::PointXYZ> vg;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered (new pcl::PointCloud<pcl::PointXYZ>);
-  vg.setInputCloud (cloud);
-  vg.setLeafSize (0.001f, 0.001f, 0.001f);
-  vg.filter (*cloud_filtered);
-  std::cout << "PointCloud after filtering has: " << cloud_filtered->size ()  << " data points." << std::endl; //*
+	// voxel downsample
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered = downsample(cloud, downsampleSize);
+	// remove main planar surface
+	cloud_filtered = removePlane(cloud_filtered, planeTolerance);
+	// cluster using KdTrees
+	std::vector<pcl::PointIndices> cluster_indices = cluster(cloud_filtered, clusterTolerance);
 
-  // Create the segmentation object for the planar model and set all the parameters
-  pcl::SACSegmentation<pcl::PointXYZ> seg;
-  pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
-  pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane (new pcl::PointCloud<pcl::PointXYZ> ());
-  pcl::PCDWriter writer;
-  seg.setOptimizeCoefficients (true);
-  seg.setModelType (pcl::SACMODEL_PLANE);
-  seg.setMethodType (pcl::SAC_RANSAC);
-  seg.setMaxIterations (100);
-  seg.setDistanceThreshold (0.02);
-
-  int i=0, nr_points = (int) cloud_filtered->size ();
-  while (cloud_filtered->size () > 0.3 * nr_points)
-  {
-    // Segment the largest planar component from the remaining cloud
-    seg.setInputCloud (cloud_filtered);
-    seg.segment (*inliers, *coefficients);
-    if (inliers->indices.size () == 0)
-    {
-      std::cout << "Could not estimate a planar model for the given dataset." << std::endl;
-      break;
-    }
-
-    // Extract the planar inliers from the input cloud
-    pcl::ExtractIndices<pcl::PointXYZ> extract;
-    extract.setInputCloud (cloud_filtered);
-    extract.setIndices (inliers);
-    extract.setNegative (false);
-
-    // Get the points associated with the planar surface
-    extract.filter (*cloud_plane);
-    std::cout << "PointCloud representing the planar component: " << cloud_plane->size () << " data points." << std::endl;
-
-    // Remove the planar inliers, extract the rest
-    extract.setNegative (true);
-    extract.filter (*cloud_f);
-    *cloud_filtered = *cloud_f;
-  }
-
-  // Creating the KdTree object for the search method of the extraction
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-  tree->setInputCloud (cloud_filtered);
-
-  std::vector<pcl::PointIndices> cluster_indices;
-  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  ec.setClusterTolerance (0.02); // 2cm
-  ec.setMinClusterSize (100);
-  ec.setMaxClusterSize (25000);
-  ec.setSearchMethod (tree);
-  ec.setInputCloud (cloud_filtered);
-  ec.extract (cluster_indices);
-	//std::cout << "\n" << cluster_indices.size() << '\n';
-
+	// for each cluster
   int j = 0;
   std::vector<float> x;
   std::vector<float> y;
@@ -189,13 +241,16 @@ void pointCloudSegmenter::segment_and_publish (
 
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
+		std::cout << "Cluster " << j << '\n';
+
+		// append point into cluster
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
     for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit) {
-			// std::cout << *pit << '\n';
-      cloud_cluster->push_back ((*cloud_filtered)[*pit]); //*
+      cloud_cluster->push_back ((*cloud_filtered)[*pit]);
 		}
 
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull = concave_hull(cloud_cluster);
+		// create concave hull from cluster
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull = concave_hull(cloud_cluster, hullAlpha);
 
     cloud_cluster->width = cloud_cluster->size ();
     cloud_cluster->height = 1;
@@ -217,19 +272,16 @@ void pointCloudSegmenter::segment_and_publish (
     cent_y.push_back(end_cluster);
     for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it=cloud_hull->points.begin();it !=cloud_hull->points.end();++it) {
       x.push_back( it->x);
-      y.push_back( it->y); 
+      y.push_back( it->y);
     }
     x.push_back(end_cluster);
     y.push_back(end_cluster);
 
-    // std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
-    // std::stringstream ss;
-    // ss << "cloud_cluster_" << j << ".pcd";
-    // writer.write<pcl::PointXYZ> (ss.str (), *cloud_cluster, false); //*
+		// save hull as file for later viewing
 		std::cout << "PointCloud representing the Cluster: " << cloud_hull->size () << " data points." << std::endl;
     std::stringstream ss;
     ss << "cloud_hull_" << j << ".pcd";
-    writer.write<pcl::PointXYZ> (ss.str (), *cloud_hull, false); //*
+    writer.write<pcl::PointXYZ> (ss.str (), *cloud_hull, false);
     j++;
     
   }
