@@ -30,25 +30,29 @@ class pointCloudSegmenter{
     ros::NodeHandle nh;
     ros::Publisher pub;
     ros::Subscriber sub;
-		bool execute;
+    ros::ServiceServer serv;
+		bool go_segment_and_publish;
 		pointCloudSegmenter();
 		void callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
-		pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
-		int segment(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
+		bool serv_callback(const boost::shared_ptr<const control::cluster_points::Request>& req,
+         const boost::shared_ptr<const control::cluster_points::Response>& res);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
+		void segment_and_publish(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 
 };
 // constructor
 pointCloudSegmenter::pointCloudSegmenter () {
-	execute = true;
+	go_segment_and_publish = true;
   pub = nh.advertise<control::cluster_points>("cloud_hull", 10);
   sub = nh.subscribe<sensor_msgs::PointCloud2> (
 		"/camera/depth/points", queue_size,
 		&pointCloudSegmenter::callback, this);
    	ROS_INFO("Node Subscribed");
+  serv = nh.advertiseService("get_hulls", pointCloudSegmenter::serv_callback, this);
 }
 
 void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
-	if (!execute) {
+	if (!go_segment_and_publish) {
 		return;
 	}
 	std::cout<< "Converting pointcloud2 to pcl_poinctcloud xyz";
@@ -56,10 +60,10 @@ void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::Po
   pcl_conversions::toPCL(*input,pcl_pc2);
   pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
-  execute = false;
+  go_segment_and_publish = false;
   std::cout<<"temp_cloud has: "<< temp_cloud->size() <<" size ";
 
-	int status = segment(temp_cloud);
+	segment_and_publish(temp_cloud);
 	std::cout<<"Finished executed callback, will not execute callback again!";
 	// do stuff with temp_cloud here
 }
@@ -107,7 +111,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::concave_hull (
 	return cloud_hull;
 }
 
-int pointCloudSegmenter::segment (
+void pointCloudSegmenter::segment_and_publish (
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
 	{
   // Read in the cloud data
@@ -200,25 +204,24 @@ int pointCloudSegmenter::segment (
 		cloud_hull->width = cloud_hull->size ();
     cloud_hull->height = 1;
     cloud_hull->is_dense = true;
-
+    
+    //computing the centroid
     Eigen::Vector4f centroid;
-		//pcl::compute3DCentroid<pcl::PointXYZ, Eigen::Vector4f> centroid_compute;
-    std::cout<<"points used "<<pcl::compute3DCentroid(*cloud_hull,centroid)<<'\n';
-		//centroid_compute.compute3DCentroid(cloud_hull, centroid);
-    std::cout<<"Centroid of this cluster: x "<<end_cluster<< '\n';
+    pcl::compute3DCentroid(*cloud_hull,centroid);    
     float centroid_x =centroid[0], centroid_y=centroid[1];
 
+    //updating the msg data
     cent_x.push_back(centroid_x);
     cent_y.push_back(centroid_y);
     cent_x.push_back(end_cluster);
     cent_y.push_back(end_cluster);
-    
     for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it=cloud_hull->points.begin();it !=cloud_hull->points.end();++it) {
       x.push_back( it->x);
       y.push_back( it->y); 
     }
     x.push_back(end_cluster);
     y.push_back(end_cluster);
+
     // std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
     // std::stringstream ss;
     // ss << "cloud_cluster_" << j << ".pcd";
@@ -228,9 +231,16 @@ int pointCloudSegmenter::segment (
     ss << "cloud_hull_" << j << ".pcd";
     writer.write<pcl::PointXYZ> (ss.str (), *cloud_hull, false); //*
     j++;
+    
   }
-
-  return (0);
+  // creating the msg from the vectors and sending it
+  control::cluster_points msg;
+  msg.hull_x = x;
+  msg.hull_y = y;
+  msg.centroid_x = cent_x;
+  msg.centroid_y = cent_y;
+  pub.publish(msg);
+  std::cout <<"XYCentroid topics updated \n";
 }
 
 
