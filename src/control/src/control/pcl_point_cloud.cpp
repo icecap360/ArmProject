@@ -32,15 +32,18 @@ class pointCloudSegmenter{
     ros::NodeHandle nh;
     ros::Publisher pub;
     ros::Subscriber sub;
-    //ros::ServiceServer serv;
+    ros::ServiceServer serv;
 		bool go_segment_and_publish;
 		pointCloudSegmenter();
 		void callback(
       const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
 		
-    //bool serv_callback(
-    //  const boost::shared_ptr<const control::doService::Request> &res,
-    //  const boost::shared_ptr<const control::doService::Response> &req);
+    bool serv_callback(
+       control::doService::Request &req,
+       control::doService::Response &res){
+            //res->success=true;
+            return true;
+    };
     pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr downsample (
@@ -69,14 +72,10 @@ pointCloudSegmenter::pointCloudSegmenter () {
 		"/camera/depth/points", queue_size,
 		&pointCloudSegmenter::callback, this);
    	ROS_INFO("Node Subscribed");
-  //serv = nh.advertiseService("get_hulls", pointCloudSegmenter::serv_callback, this);
+  serv = nh.advertiseService("get_hulls", &pointCloudSegmenter::serv_callback, this);
 }
 // service callback
-/*bool pointCloudSegmenter::serv_callback(
-  const boost::shared_ptr<const control::doService::Request> &req,
-  const boost::shared_ptr<const control::doService::Response> &res){
-        return true;
-      };*/
+
 // topic callback
 void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
 	if (!go_segment_and_publish) {
