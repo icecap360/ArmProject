@@ -22,6 +22,8 @@
 #include <pcl/surface/concave_hull.h>
 #include <pcl_ros/point_cloud.h>
 #include <control/cluster_points.h>
+#include <control/doService.h>
+
 uint32_t queue_size = 1;
 class pointCloudSegmenter;
 
@@ -33,10 +35,12 @@ class pointCloudSegmenter{
     //ros::ServiceServer serv;
 		bool go_segment_and_publish;
 		pointCloudSegmenter();
-		void callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
+		void callback(
+      const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
 		
-    //bool serv_callback(const boost::shared_ptr<const control::cluster_points::Request>& req,
-    //     const boost::shared_ptr<const control::cluster_points::Response>& res);
+    //bool serv_callback(
+    //  const boost::shared_ptr<const control::doService::Request> &res,
+    //  const boost::shared_ptr<const control::doService::Response> &req);
     pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
 		
     pcl::PointCloud<pcl::PointXYZ>::Ptr downsample (
@@ -67,7 +71,13 @@ pointCloudSegmenter::pointCloudSegmenter () {
    	ROS_INFO("Node Subscribed");
   //serv = nh.advertiseService("get_hulls", pointCloudSegmenter::serv_callback, this);
 }
-// callback
+// service callback
+/*bool pointCloudSegmenter::serv_callback(
+  const boost::shared_ptr<const control::doService::Request> &req,
+  const boost::shared_ptr<const control::doService::Response> &res){
+        return true;
+      };*/
+// topic callback
 void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
 	if (!go_segment_and_publish) {
 		return;
