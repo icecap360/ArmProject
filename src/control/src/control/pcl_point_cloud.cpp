@@ -21,12 +21,15 @@
 #include <pcl/filters/project_inliers.h>
 #include <pcl/surface/concave_hull.h>
 #include <pcl_ros/point_cloud.h>
-
+#include <control/cluster_points.h>
 uint32_t queue_size = 1;
 class pointClouodSegmenter;
 
 class pointCloudSegmenter{
 	public:
+    ros::NodeHandle nh;
+    ros::Publisher pub;
+    ros::Subscriber sub;
 		bool execute;
 		pointCloudSegmenter();
 		void callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
@@ -37,24 +40,27 @@ class pointCloudSegmenter{
 // constructor
 pointCloudSegmenter::pointCloudSegmenter () {
 	execute = true;
+  pub = nh.advertise<control::cluster_points>("cloud_hull", 10);
+  sub = nh.subscribe<sensor_msgs::PointCloud2> (
+		"/camera/depth/points", queue_size,
+		&pointCloudSegmenter::callback, this);
+   	ROS_INFO("Node Subscribed");
 }
-// pointCloudSegmenter pcs = pointCloudSegmenter();
-
 
 void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
 	if (!execute) {
 		return;
 	}
-	ROS_INFO( "Converting pointcloud2 to pcl_poinctcloud xyz");
-    pcl::PCLPointCloud2 pcl_pc2;
-    pcl_conversions::toPCL(*input,pcl_pc2);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
-    execute = false;
-  	ROS_INFO( "temp_cloud has: %d size ", temp_cloud->size());
+	std::cout<< "Converting pointcloud2 to pcl_poinctcloud xyz";
+  pcl::PCLPointCloud2 pcl_pc2;
+  pcl_conversions::toPCL(*input,pcl_pc2);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
+  execute = false;
+  std::cout<<"temp_cloud has: "<< temp_cloud->size() <<" size ";
 
 	int status = segment(temp_cloud);
-	ROS_INFO("Finished executed callback, will not execute callback again!");
+	std::cout<<"Finished executed callback, will not execute callback again!";
 	// do stuff with temp_cloud here
 }
 
@@ -189,15 +195,20 @@ int pointCloudSegmenter::segment (
     cloud_hull->height = 1;
     cloud_hull->is_dense = true;
 
+    /*double centroid_x = 0;
+    for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it=(*cloud_hull).points.begin();it !=(*cloud_hull).points.end();++it) {
+      centroid_x += it->x;
+    }
+    centroid_x/=cloud_hull->size();
+    std::cout<<'\n'<<centroid_x<<'\n';*/
     Eigen::Vector4f centroid;
 		//pcl::compute3DCentroid<pcl::PointXYZ, Eigen::Vector4f> centroid_compute;
     std::cout<<"points used "<<pcl::compute3DCentroid(*cloud_hull,centroid)<<'\n';
 		//centroid_compute.compute3DCentroid(cloud_hull, centroid);
     std::cout<<"Centroid of this cluster: x "<<
-	    centroid[0] << " y " <<
-	    centroid[1] << " z " <<
-	    centroid[2] << " size "<<
-			centroid.size()<<'\n';
+    centroid[0] << " y " <<
+    centroid[1] << " z " <<
+    centroid[2] << '\n';
 
     // std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
     // std::stringstream ss;
@@ -216,12 +227,8 @@ int pointCloudSegmenter::segment (
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "pcl_node");
-	ros::NodeHandle nh;
-	ROS_INFO("Node initialize");
 	pointCloudSegmenter pcs = pointCloudSegmenter();
-	ros::Subscriber sub = nh.subscribe<sensor_msgs::PointCloud2> (
-		"/camera/depth/points", queue_size,
-		&pointCloudSegmenter::callback, &pcs);
-   	ROS_INFO("Node Subscribed");
+	ROS_INFO("Node initialize");
+
 	ros::spin();
 }
