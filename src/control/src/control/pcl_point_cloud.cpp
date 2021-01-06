@@ -45,16 +45,16 @@ void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::Po
 	if (!execute) {
 		return;
 	}
-	ROS_INFO( "Converting pointcloud2 to pcl_poinctcloud xyz");
-    pcl::PCLPointCloud2 pcl_pc2;
-    pcl_conversions::toPCL(*input,pcl_pc2);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
-    execute = false;
-  	ROS_INFO( "temp_cloud has: %d size ", temp_cloud->size());
+	std::cout<< "Converting pointcloud2 to pcl_poinctcloud xyz";
+  pcl::PCLPointCloud2 pcl_pc2;
+  pcl_conversions::toPCL(*input,pcl_pc2);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
+  execute = false;
+  std::cout<<"temp_cloud has: "<< temp_cloud->size() <<" size ";
 
 	int status = segment(temp_cloud);
-	ROS_INFO("Finished executed callback, will not execute callback again!");
+	std::cout<<"Finished executed callback, will not execute callback again!";
 	// do stuff with temp_cloud here
 }
 
@@ -98,8 +98,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>
 	return cloud_hull;
 }
 
-int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
-{
+int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){
   // Read in the cloud data
   pcl::PCDReader reader;
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
@@ -175,8 +174,7 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
       cloud_cluster->push_back ((*cloud_filtered)[*pit]); //*
 		}
 
-		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull = concave_hull(cloud_filtered);
-
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull = concave_hull(cloud_cluster);
 
     cloud_cluster->width = cloud_cluster->size ();
     cloud_cluster->height = 1;
@@ -186,13 +184,18 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
     cloud_hull->height = 1;
     cloud_hull->is_dense = true;
 
+    /*double centroid_x = 0;
+    for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it=(*cloud_hull).points.begin();it !=(*cloud_hull).points.end();++it) {
+      centroid_x += it->x; 
+    }
+    centroid_x/=cloud_hull->size();
+    std::cout<<'\n'<<centroid_x<<'\n';*/
     Eigen::Vector4f centroid;
     pcl::compute3DCentroid(*cloud_hull,centroid);
     std::cout<<"Centroid of this cluster: x "<<
     centroid[0] << " y " << 
-    centroid[1] << " z " << 
-    centroid[2] << " size "<<centroid.size()<<'\n';
-
+    centroid[1] << " z " <<
+    centroid[2] << '\n';
 
     // std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
     // std::stringstream ss;
