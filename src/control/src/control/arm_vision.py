@@ -15,13 +15,17 @@ class armVision:
         self.set_object_serv = rospy.Service('set_object', doService, self.set_object)
         self.complete_task_serv = rospy.Service('set_task_complete', doService, self.set_task_complete)
         self.is_empty_serv = rospy.Service('is_task_empty', isTaskEmpty, self.is_task_empty)
-        self.is_segment_complete_serv = rospy.Service('set_segment_complete', segmentComplete, self.set_segment_complete)
+        self.pcl_segment_complete_serv = rospy.Service('pcl_segment_complete', segmentComplete, self.pcl_segment_complete)
+
+        rospy.wait_for_service('get_hulls')
+        self.get_hulls = rospy.ServiceProxy('get_hulls', doService)
+
         self.object_list = []
         self.object_list_empty = True
         self.x = 0
         self.y = 0
         self.obj_class = ""
-        self.segment_complete = False
+        self.pcl_segment_complete = False
 
     def get_x(self):
         return self.x
@@ -45,8 +49,8 @@ class armVision:
         self.object_list = object_list
     def set_object_list_empty(self, empty):
         self.object_list_empty = empty
-    def set_segment_complete(self, complete):
-        self.segment_complete = complete
+    def set_pcl_segment_complete(self, complete):
+        self.pcl_segment_complete = complete
 
     """ services """
     # set object as head of list
@@ -65,6 +69,22 @@ class armVision:
         obj_list.append(obj)
         self.set_object_list(obj_list)
         self.set_object_list_empty(False)
+
+
+        success = self.get_hulls().success
+        if not success:
+    		print("Could not get hulls.")
+    	else:
+    		print("Hulls obtained.")
+        # todo:
+        # get image segments/bounding boxes
+        # compare pcl and bounding box segments
+        # publish final object pos and classes
+
+        # reset all flags of complete
+        self.set_pcl_segment_complete(False)
+        # reset image_segment
+
     	return True
 
     def set_task_complete(self, req):
@@ -80,8 +100,10 @@ class armVision:
     def is_task_empty(self, req):
         return self.get_object_list_empty()
 
-    def set_segment_complete(self, req):
-        self.set_segment_complete(True)
+    def pcl_segment_complete(self, req):
+        self.set_pcl_segment_complete(True)
+        print(" ********************** Reached here ***********************")
+        return True
 
 
 class object:

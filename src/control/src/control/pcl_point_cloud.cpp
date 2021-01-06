@@ -39,10 +39,10 @@ class pointCloudSegmenter{
 		pointCloudSegmenter();
 		void callback(
       const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
-		
+
     bool serv_callback(control::doService::Request &req,
        control::doService::Response &res);
- 
+
     pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr downsample (
@@ -65,22 +65,22 @@ class pointCloudSegmenter{
 };
 // constructor
 pointCloudSegmenter::pointCloudSegmenter () {
-	go_segment_and_publish = true; //this should be off
+	go_segment_and_publish = false; //this should be off
   pub = nh.advertise<control::cluster_points>("cloud_hull", 10);
   sub = nh.subscribe<sensor_msgs::PointCloud2> (
 		"/camera/depth/points", queue_size,
 		&pointCloudSegmenter::callback, this);
    	ROS_INFO("Node Subscribed");
   serv = nh.advertiseService("get_hulls", &pointCloudSegmenter::serv_callback, this);
-  client = nh.serviceClient<control::segmentComplete>("set_segment_complete");
+  client = nh.serviceClient<control::segmentComplete>("pcl_segment_complete");
 
 }
 // service callback
 bool pointCloudSegmenter::serv_callback(
   control::doService::Request &req,
   control::doService::Response &res){
-  go_segment_and_publish=false;
-  //res->success=true;
+  go_segment_and_publish=true;
+  res.success=true;
       return true;
 };
 // topic callback
@@ -97,7 +97,19 @@ void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::Po
 
 	segment_and_publish(temp_cloud, 0.01f, 0.02, 0.03, 0.01);
   go_segment_and_publish = false;
-  std::cout<<"Finished executed callback, will not execute callback again!"<<'\n';
+
+	// because the segmentation topics are updated, call the service
+	control::segmentComplete srv; //the request for segmentComplete is empty
+	if (client.call(srv))
+	{
+     ROS_INFO("success");
+   }
+   else
+   {
+     ROS_ERROR("Failed to call service");
+   }
+
+  std::cout<<"Finished executed callback"<<'\n';
 	// do stuff with temp_cloud here
 }
 
@@ -305,14 +317,11 @@ void pointCloudSegmenter::segment_and_publish (
   control::cluster_points msg;
   msg.hull_x = x;
   msg.hull_y = y;
-  // msg.centroid_x = cent_x;
-  // msg.centroid_y = cent_y;
+  msg.centroid_x = cent_x;
+  msg.centroid_y = cent_y;
   pub.publish(msg);
   std::cout <<"XYCentroid topics updated \n";
 
-  // because the segmentation topics are updated, call the service
-  control::segmentComplete srv; //the srv file for segmentComplete is empty
-  client.call(srv);
 }
 
 
