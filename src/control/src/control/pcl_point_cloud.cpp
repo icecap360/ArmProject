@@ -23,6 +23,7 @@
 #include <pcl_ros/point_cloud.h>
 #include <control/cluster_points.h>
 #include <control/doService.h>
+#include <control/segmentComplete.h>
 
 uint32_t queue_size = 1;
 class pointCloudSegmenter;
@@ -33,6 +34,7 @@ class pointCloudSegmenter{
     ros::Publisher pub;
     ros::Subscriber sub;
     ros::ServiceServer serv;
+    ros::ServiceClient client;
 		bool go_segment_and_publish;
 		pointCloudSegmenter();
 		void callback(
@@ -70,6 +72,8 @@ pointCloudSegmenter::pointCloudSegmenter () {
 		&pointCloudSegmenter::callback, this);
    	ROS_INFO("Node Subscribed");
   serv = nh.advertiseService("get_hulls", &pointCloudSegmenter::serv_callback, this);
+  client = nh.serviceClient<control::segmentComplete>("set_segment_complete");
+
 }
 // service callback
 bool pointCloudSegmenter::serv_callback(
@@ -305,6 +309,10 @@ void pointCloudSegmenter::segment_and_publish (
   // msg.centroid_y = cent_y;
   pub.publish(msg);
   std::cout <<"XYCentroid topics updated \n";
+
+  // because the segmentation topics are updated, call the service
+  control::segmentComplete srv; //the srv file for segmentComplete is empty
+  client.call(srv);
 }
 
 
