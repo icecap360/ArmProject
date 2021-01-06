@@ -38,12 +38,9 @@ class pointCloudSegmenter{
 		void callback(
       const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
 		
-    bool serv_callback(
-       control::doService::Request &req,
-       control::doService::Response &res){
-            //res->success=true;
-            return true;
-    };
+    bool serv_callback(control::doService::Request &req,
+       control::doService::Response &res);
+ 
     pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr downsample (
@@ -66,7 +63,7 @@ class pointCloudSegmenter{
 };
 // constructor
 pointCloudSegmenter::pointCloudSegmenter () {
-	go_segment_and_publish = true;
+	go_segment_and_publish = true; //this should be off
   pub = nh.advertise<control::cluster_points>("cloud_hull", 10);
   sub = nh.subscribe<sensor_msgs::PointCloud2> (
 		"/camera/depth/points", queue_size,
@@ -75,7 +72,13 @@ pointCloudSegmenter::pointCloudSegmenter () {
   serv = nh.advertiseService("get_hulls", &pointCloudSegmenter::serv_callback, this);
 }
 // service callback
-
+bool pointCloudSegmenter::serv_callback(
+  control::doService::Request &req,
+  control::doService::Response &res){
+  go_segment_and_publish=false;
+  //res->success=true;
+      return true;
+};
 // topic callback
 void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
 	if (!go_segment_and_publish) {
@@ -86,11 +89,11 @@ void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::Po
   pcl_conversions::toPCL(*input,pcl_pc2);
   pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
-  go_segment_and_publish = false;
   std::cout<<"temp_cloud has: "<< temp_cloud->size() <<" size ";
 
 	segment_and_publish(temp_cloud, 0.01f, 0.02, 0.03, 0.01);
-	std::cout<<"Finished executed callback, will not execute callback again!"<<'\n';
+  go_segment_and_publish = false;
+  std::cout<<"Finished executed callback, will not execute callback again!"<<'\n';
 	// do stuff with temp_cloud here
 }
 
