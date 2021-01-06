@@ -172,6 +172,12 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){
 	//std::cout << "\n" << cluster_indices.size() << '\n';
 
   int j = 0;
+  std::vector<float> x;
+  std::vector<float> y;
+  std::vector<float> cent_x;
+  std::vector<float> cent_y;
+  float end_cluster = std::numeric_limits<float>::infinity();
+
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
   {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
@@ -190,19 +196,25 @@ int segment (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){
     cloud_hull->height = 1;
     cloud_hull->is_dense = true;
 
-    /*double centroid_x = 0;
-    for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it=(*cloud_hull).points.begin();it !=(*cloud_hull).points.end();++it) {
-      centroid_x += it->x; 
-    }
-    centroid_x/=cloud_hull->size();
-    std::cout<<'\n'<<centroid_x<<'\n';*/
     Eigen::Vector4f centroid;
     pcl::compute3DCentroid(*cloud_hull,centroid);
     std::cout<<"Centroid of this cluster: x "<<
     centroid[0] << " y " << 
     centroid[1] << " z " <<
     centroid[2] << '\n';
+    float centroid_x =centroid[0], centroid_y=centroid[1];
 
+    cent_x.push_back(centroid_x);
+    cent_y.push_back(centroid_y);
+    cent_x.push_back(end_cluster);
+    cent_y.push_back(end_cluster);
+    
+    for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it=cloud_hull->points.begin();it !=cloud_hull->points.end();++it) {
+      x.push_back( it->x);
+      y.push_back( it->y); 
+    }
+    x.push_back(end_cluster);
+    y.push_back(end_cluster);
     // std::cout << "PointCloud representing the Cluster: " << cloud_cluster->size () << " data points." << std::endl;
     // std::stringstream ss;
     // ss << "cloud_cluster_" << j << ".pcd";
