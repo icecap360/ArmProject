@@ -1,9 +1,10 @@
+// general inports
 #include <ros/ros.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <iostream>
-
+// segmentation imports
 #include <pcl/ModelCoefficients.h>
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
@@ -15,36 +16,33 @@
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <pcl/segmentation/extract_clusters.h>
-// hull
+// concave hull imports
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/filters/project_inliers.h>
 #include <pcl/surface/concave_hull.h>
-#include <pcl_ros/point_cloud.h>
+// service imports
 #include <control/cluster_points.h>
 #include <control/doService.h>
 #include <control/segmentComplete.h>
 
+// global definitions
 uint32_t queue_size = 1;
-class pointCloudSegmenter;
+class pclSegmenter;
 
-class pointCloudSegmenter{
+class pclSegmenter{
 	public:
-    ros::NodeHandle nh;
-    ros::Publisher pub;
-    ros::Subscriber sub;
-    ros::ServiceServer serv;
-    ros::ServiceClient client;
+		// attributes of class
+		ros::NodeHandle nh;
+    ros::Publisher cloud_hull_pub;
+    ros::Subscriber pcl_sub;
+    ros::ServiceServer get_hulls_serv;
+    ros::ServiceClient pcl_segment_complete_serv;
 		bool go_segment_and_publish;
-		pointCloudSegmenter();
-		void callback(
-      const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
 
-    bool serv_callback(control::doService::Request &req,
-       control::doService::Response &res);
-
-    pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered);
-
+		// constructor
+		pclSegmenter();
+		// helpers
     pcl::PointCloud<pcl::PointXYZ>::Ptr downsample (
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 			float downsampleSize);
@@ -57,64 +55,73 @@ class pointCloudSegmenter{
 		pcl::PointCloud<pcl::PointXYZ>::Ptr concave_hull (
 			pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
 			float hullAlpha);
-
+		// downsampleSize and tolerances are in (m)
     void segment_and_publish(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 			float downsampleSize, float planeTolerance,
 			float clusterTolerance, float hullAlpha);
-
+		// callbacks
+		void pcl_subcb(
+			const boost::shared_ptr<const sensor_msgs::PointCloud2>& input);
+		bool get_hulls_servcb(control::doService::Request &req,
+			 control::doService::Response &res);
 };
-// constructor
-pointCloudSegmenter::pointCloudSegmenter () {
-	go_segment_and_publish = false; //this should be off
-  pub = nh.advertise<control::cluster_points>("cloud_hull", 10);
-  sub = nh.subscribe<sensor_msgs::PointCloud2> (
-		"/camera/depth/points", queue_size,
-		&pointCloudSegmenter::callback, this);
-   	ROS_INFO("Node Subscribed");
-  serv = nh.advertiseService("get_hulls", &pointCloudSegmenter::serv_callback, this);
-  client = nh.serviceClient<control::segmentComplete>("pcl_segment_complete");
 
+// constructor
+pclSegmenter::pclSegmenter () {
+	// init segment_and_publish to off
+	go_segment_and_publish = false;
+	// init publishers, subscribers, and services
+  cloud_hull_pub = nh.advertise<control::cluster_points>("cloud_hull", 10);
+  pcl_sub = nh.subscribe<sensor_msgs::PointCloud2> (
+		"/camera/depth/points", queue_size,
+		&pclSegmenter::pcl_subcb, this);
+   	ROS_INFO("Node Subscribed");
+  get_hulls_serv = nh.advertiseService("get_hulls", &pclSegmenter::get_hulls_servcb, this);
+  pcl_segment_complete_serv = nh.serviceClient<control::segmentComplete>("pcl_segment_complete");
 }
+
 // service callback
-bool pointCloudSegmenter::serv_callback(
+bool pclSegmenter::get_hulls_servcb (
   control::doService::Request &req,
-  control::doService::Response &res){
+  control::doService::Response &res)
+{
   go_segment_and_publish=true;
   res.success=true;
-      return true;
-};
-// topic callback
-void pointCloudSegmenter::callback(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
+  return true;
+}
+
+// subscriber callback
+// called whenever subscribed message received
+void pclSegmenter::pcl_subcb(const boost::shared_ptr<const sensor_msgs::PointCloud2>& input){
 	if (!go_segment_and_publish) {
 		return;
 	}
-	std::cout<< "Converting pointcloud2 to pcl_poinctcloud xyz";
+	// converts pointcloud2 to pcl::PointXYZ
+	std::cout<< "Converting pointcloud2 to pcl_pointcloud xyz";
   pcl::PCLPointCloud2 pcl_pc2;
   pcl_conversions::toPCL(*input,pcl_pc2);
   pcl::PointCloud<pcl::PointXYZ>::Ptr temp_cloud(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::fromPCLPointCloud2(pcl_pc2,*temp_cloud);
   std::cout<<"temp_cloud has: "<< temp_cloud->size() <<" size ";
 
+	// segment into clusters and publish concave hull points
 	segment_and_publish(temp_cloud, 0.01f, 0.02, 0.03, 0.01);
+	// stop publishing until service called again
   go_segment_and_publish = false;
 
 	// because the segmentation topics are updated, call the service
 	control::segmentComplete srv; //the request for segmentComplete is empty
-	if (client.call(srv))
-	{
+	if (pcl_segment_complete_serv.call(srv)) {
      ROS_INFO("success");
-   }
-   else
-   {
+   } else {
      ROS_ERROR("Failed to call service");
    }
 
   std::cout<<"Finished executed callback"<<'\n';
-	// do stuff with temp_cloud here
 }
 
 // voxel downsample
-pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::downsample (
+pcl::PointCloud<pcl::PointXYZ>::Ptr pclSegmenter::downsample (
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 	float downsampleSize)
 {
@@ -124,12 +131,13 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::downsample (
   vg.setInputCloud (cloud);
   vg.setLeafSize (downsampleSize, downsampleSize, downsampleSize);
   vg.filter (*cloud_filtered);
-  std::cout << "PointCloud after filtering has: " << cloud_filtered->size ()  << " data points." << std::endl; //*
+  std::cout << "PointCloud after filtering has: " << cloud_filtered->size ()
+		<< " data points." << std::endl;
 	return cloud_filtered;
 }
 
 // removes main plane
-pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::removePlane (
+pcl::PointCloud<pcl::PointXYZ>::Ptr pclSegmenter::removePlane (
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
 	float planeTolerance)
 {
@@ -165,7 +173,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::removePlane (
 
     // Get the points associated with the planar surface
     extract.filter (*cloud_plane);
-    std::cout << "PointCloud representing the planar component: " << cloud_plane->size () << " data points." << std::endl;
+    std::cout << "PointCloud representing the planar component: "
+			<< cloud_plane->size () << " data points." << std::endl;
 
     // Remove the planar inliers, extract the rest
     extract.setNegative (true);
@@ -176,31 +185,31 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::removePlane (
 }
 
 // cluster points using KdTree and GNN
-std::vector<pcl::PointIndices> pointCloudSegmenter::cluster (
+std::vector<pcl::PointIndices> pclSegmenter::cluster (
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
 	float clusterTolerance)
-	{
-		// Creating the KdTree object for the search method of the extraction
-	  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-	  tree->setInputCloud (cloud_filtered);
+{
+	// Creating the KdTree object for the search method of the extraction
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+  tree->setInputCloud (cloud_filtered);
 
-	  std::vector<pcl::PointIndices> cluster_indices;
-	  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-	  ec.setClusterTolerance (clusterTolerance);
-	  ec.setMinClusterSize (100);
-	  ec.setMaxClusterSize (25000);
-	  ec.setSearchMethod (tree);
-	  ec.setInputCloud (cloud_filtered);
-	  ec.extract (cluster_indices);
+  std::vector<pcl::PointIndices> cluster_indices;
+  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+  ec.setClusterTolerance (clusterTolerance);
+  ec.setMinClusterSize (100);
+  ec.setMaxClusterSize (25000);
+  ec.setSearchMethod (tree);
+  ec.setInputCloud (cloud_filtered);
+  ec.extract (cluster_indices);
 
-		return cluster_indices;
+	return cluster_indices;
 }
 
 // constructs 2D concave hull
-pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::concave_hull (
+pcl::PointCloud<pcl::PointXYZ>::Ptr pclSegmenter::concave_hull (
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_filtered,
 	float hullAlpha)
-	{
+{
 	// projects points onto plane before computing hull
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected (new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -244,11 +253,11 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloudSegmenter::concave_hull (
 
 // main segmenter
 // tolerances are in m units
-void pointCloudSegmenter::segment_and_publish (
+void pclSegmenter::segment_and_publish (
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 	float downsampleSize, float planeTolerance,
 	float clusterTolerance, float hullAlpha)
-	{
+{
   // pcl clusters later saved into files
 	pcl::PCDWriter writer;
 
@@ -265,6 +274,7 @@ void pointCloudSegmenter::segment_and_publish (
   std::vector<float> y;
   std::vector<float> cent_x;
   std::vector<float> cent_y;
+	// signifier for end of cluster points
   float end_cluster = std::numeric_limits<float>::infinity();
 
   for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
@@ -279,26 +289,26 @@ void pointCloudSegmenter::segment_and_publish (
 
 		// create concave hull from cluster
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_hull = concave_hull(cloud_cluster, hullAlpha);
-
-    cloud_cluster->width = cloud_cluster->size ();
-    cloud_cluster->height = 1;
-    cloud_cluster->is_dense = true;
-
 		cloud_hull->width = cloud_hull->size ();
     cloud_hull->height = 1;
     cloud_hull->is_dense = true;
 
-    //computing the centroid
+    //compute the centroid
     Eigen::Vector4f centroid;
     pcl::compute3DCentroid(*cloud_hull,centroid);
-    float centroid_x =centroid[0], centroid_y=centroid[1];
+    float centroid_x = centroid[0];
+		float centroid_y = centroid[1];
 
-    //updating the msg data
+    // update the msg data
+		// add centroid of cluster
     cent_x.push_back(centroid_x);
     cent_y.push_back(centroid_y);
     cent_x.push_back(end_cluster);
     cent_y.push_back(end_cluster);
-    for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it=cloud_hull->points.begin();it !=cloud_hull->points.end();++it) {
+		// add cloud_hull points of cluster
+    for (pcl::PointCloud<pcl::PointXYZ>::const_iterator it=cloud_hull->points.begin();
+			it !=cloud_hull->points.end(); ++it)
+		{
       x.push_back( it->x);
       y.push_back( it->y);
     }
@@ -313,22 +323,22 @@ void pointCloudSegmenter::segment_and_publish (
     j++;
 
   }
-  // creating the msg from the vectors and sending it
+
+  // creating the msg from the vectors and publish it
   control::cluster_points msg;
   msg.hull_x = x;
   msg.hull_y = y;
   msg.centroid_x = cent_x;
   msg.centroid_y = cent_y;
-  pub.publish(msg);
+  cloud_hull_pub.publish(msg);
   std::cout <<"XYCentroid topics updated \n";
-
 }
 
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "pcl_node");
-	pointCloudSegmenter pcs = pointCloudSegmenter();
-	ROS_INFO("Node initialize");
+  ros::init(argc, argv, "pcl_segmenter");
+	pclSegmenter pcl_segmenter = pclSegmenter();
+	ROS_INFO("Node initialized");
 
 	ros::spin();
 }
