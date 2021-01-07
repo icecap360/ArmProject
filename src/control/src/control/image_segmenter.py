@@ -3,13 +3,14 @@
 import rospy
 from control.msg import class_list, arm_parameters
 from control.srv import isGo
-import tensorflow as tf 
+import ros_numpy
+import numpy as np 
 from sensor_msgs.msg import PointCloud2
 
 
 class imageSegmenter:
     def __init__(self):
-        print('initializing')
+        self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.pointCloudToXYZRGB)
         self.execute =True
 
     def pointCloudToXYZRGB(self, ros_cloud):
@@ -34,6 +35,6 @@ if __name__ == '__main__':
     # call constructor
     image_segmenter = imageSegmenter()
 
-    rospy.Subscriber('/camera/depth/points', PointCloud2, image_segmenter.pointCloudToXYZRGB)
+    
     # main loop
     rospy.spin()
