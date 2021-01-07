@@ -4,8 +4,9 @@ import rospy
 from control.msg import class_list, arm_parameters
 from control.srv import isGo
 import ros_numpy
-import numpy as np 
+import numpy as np
 from sensor_msgs.msg import PointCloud2
+from sensor_msgs.msg import Image
 import cv2
 import os
 import time
@@ -14,11 +15,12 @@ class imageSegmenter:
     def __init__(self):
         self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.saveImg)
         self.execute =True
-        self.weight_path= "models/yolov3.weights" 
+        self.weight_path= "models/yolov3.weights"
         self.config_path= "models/yolov3.cfg"
         self.labels_path= "models/coco.names"
         self.confidence = 0.5
         self.threshold = 0.3
+        self.image_pub = rospy.Publisher('arm_vision_image', Image, queue_size=1)
 
     def saveImg(self, ros_cloud):
         if not self.execute:
@@ -33,29 +35,40 @@ class imageSegmenter:
         img = np.array([r,g,b]) #shape is 3,480,640
         img = np.moveaxis(img, 0,2) #shape is 480,640,3
         self.img = img
-        print('The current directory of image segmenter is: ')
-        print( os.getcwd())
+        #print('The current directory of image segmenter is: ')
+        #print( os.getcwd())
         self.yolo()
-        self.execute = False
-    
+        self.execute = True
+
     def yolo(self):
         net = cv2.dnn.readNetFromDarknet(self.config_path, self.weight_path)
         layer_names = net.getLayerNames()
         layer_names = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
         #self.img = np.divide(self.img,255.0)
         self.img = cv2.resize(self.img,(416,416))#reshape to 416*416 as per blob
+        #self.img = self.rotate_image(self.img, 180)
         labels = open(self.labels_path).read().strip().split('\n')
         colors = np.random.randint(0, 255, size=(len(labels), 3), dtype='uint8')
         boxes, confidences, classIDs, idxs = self.make_prediction(net, layer_names, labels, self.img, self.confidence, self.threshold)
-        imageBounded = self.draw_bounding_boxes(self.img, boxes, confidences, classIDs, idxs, colors)
-        cv2.imshow('YOLO Object Detection', imageBounded)
+        imageBounded = self.draw_bounding_boxes(self.img, boxes, confidences, classIDs, idxs, colors, labels)
+        #print(imageBounded)
+        cv2.imshow('YOLO Object Detection', self.img)
+        self.image_pub.publish(
+            ros_numpy.image.numpy_to_image(
+                imageBounded, "rgb8"))
+    #
+    # def rotate_image(self, image, angle):
+    #     image_center = tuple(np.array(image.shape[1::-1]) / 2)
+    #     rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+    #     result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    #     return result
 
     def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
         boxes = []
         confidences = []
         classIDs = []
         for output in outputs:
-            for detection in output:            
+            for detection in output:
                 # Extract the scores, classid, and the confidence of the prediction
                 scores = detection[5:]
                 classID = np.argmax(scores)
@@ -72,7 +85,7 @@ class imageSegmenter:
                     confidences.append(float(conf))
                     classIDs.append(classID)
         return boxes, confidences, classIDs
-    
+
     def make_prediction(self, net, layer_names, labels, image, confidence, threshold):
         height, width = image.shape[:2]
         # Create a blob and pass it through the model
@@ -84,8 +97,8 @@ class imageSegmenter:
         # Apply Non-Max Suppression
         idxs = cv2.dnn.NMSBoxes(boxes, confidences, confidence, threshold)
         return boxes, confidences, classIDs, idxs
-    
-    def draw_bounding_boxes(self, image, boxes, confidences, classIDs, idxs, colors):
+
+    def draw_bounding_boxes(self, image, boxes, confidences, classIDs, idxs, colors, labels):
         if len(idxs) > 0:
             for i in idxs.flatten():
                 # extract bounding box coordinates
@@ -96,12 +109,14 @@ class imageSegmenter:
                 cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
                 text = "{}: {:.4f}".format(labels[classIDs[i]], confidences[i])
                 cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        # print(len(idxs))
+        # print(len(classIDs))
         return image
 if __name__ == '__main__':
     rospy.init_node('imageSegmenter', anonymous=True)
     # call constructor
     image_segmenter = imageSegmenter()
 
-    
+
     # main loop
     rospy.spin()
