@@ -37,7 +37,7 @@ class pclSegmenter{
     ros::Publisher cloud_hull_pub;
     ros::Subscriber pcl_sub;
     ros::ServiceServer get_hulls_serv;
-    ros::ServiceClient pcl_segment_complete_serv;
+    // ros::ServiceClient pcl_segment_complete_serv;
 		bool go_segment_and_publish;
 
 		// constructor
@@ -77,7 +77,7 @@ pclSegmenter::pclSegmenter () {
 		&pclSegmenter::pcl_subcb, this);
    	ROS_INFO("Node Subscribed");
   get_hulls_serv = nh.advertiseService("get_hulls", &pclSegmenter::get_hulls_servcb, this);
-  pcl_segment_complete_serv = nh.serviceClient<control::segmentComplete>("pcl_segment_complete");
+  // pcl_segment_complete_serv = nh.serviceClient<control::segmentComplete>("pcl_segment_complete");
 }
 
 // service callback
@@ -109,13 +109,13 @@ void pclSegmenter::pcl_subcb(const boost::shared_ptr<const sensor_msgs::PointClo
 	// stop publishing until service called again
   go_segment_and_publish = false;
 
-	// because the segmentation topics are updated, call the service
-	control::segmentComplete srv; //the request for segmentComplete is empty
-	if (pcl_segment_complete_serv.call(srv)) {
-     ROS_INFO("success");
-   } else {
-     ROS_ERROR("Failed to call service");
-   }
+	// // because the segmentation topics are updated, call the service
+	// control::segmentComplete srv; //the request for segmentComplete is empty
+	// if (pcl_segment_complete_serv.call(srv)) {
+  //    ROS_INFO("success");
+  //  } else {
+  //    ROS_ERROR("Failed to call service");
+  //  }
 
   std::cout<<"Finished executed callback"<<'\n';
 }

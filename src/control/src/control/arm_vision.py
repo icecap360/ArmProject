@@ -6,16 +6,20 @@ from control.srv import (
     isTaskEmpty,
     segmentComplete
 )
-from control.msg import object_lateral
+from control.msg import (
+    object_lateral,
+    cluster_points
+)
 
 class armVision:
     def __init__(self):
-        self.object_lateral_topic = rospy.Publisher('object_lateral', object_lateral, queue_size=10)
+        self.object_lateral_pub = rospy.Publisher('object_lateral', object_lateral, queue_size=10)
+        self.cloud_hull_sub = rospy.Subscriber('cloud_hull', cluster_points, self.pcl_segment_complete_subcb)
         self.analyze_serv = rospy.Service('locate_all_objects', doService, self.locate_all_objects)
         self.set_object_serv = rospy.Service('set_object', doService, self.set_object)
         self.complete_task_serv = rospy.Service('set_task_complete', doService, self.set_task_complete)
         self.is_empty_serv = rospy.Service('is_task_empty', isTaskEmpty, self.is_task_empty)
-        self.pcl_segment_complete_serv = rospy.Service('pcl_segment_complete', segmentComplete, self.pcl_segment_complete)
+        # self.pcl_segment_complete_serv = rospy.Service('pcl_segment_complete', segmentComplete, self.pcl_segment_complete)
 
         rospy.wait_for_service('get_hulls')
         self.get_hulls = rospy.ServiceProxy('get_hulls', doService)
@@ -26,6 +30,7 @@ class armVision:
         self.y = 0
         self.obj_class = ""
         self.pcl_segment_complete = False
+        self.image_segment_complete = False
 
     def get_x(self):
         return self.x
@@ -37,8 +42,10 @@ class armVision:
         return self.object_list
     def get_object_list_empty(self):
         return self.object_list_empty
-    def get_segment_complete(self):
-        return self.segment_complete
+    def get_pcl_segment_complete(self):
+        return self.pcl_segment_complete
+    def get_image_segment_complete(self):
+        return self.image_segment_complete
     def set_x(self, x):
         self.x = x
     def set_y(self, y):
@@ -51,6 +58,11 @@ class armVision:
         self.object_list_empty = empty
     def set_pcl_segment_complete(self, complete):
         self.pcl_segment_complete = complete
+
+    """ subscriber callbacks """
+    def pcl_segment_complete_subcb(self, cloud_hull):
+        self.set_pcl_segment_complete(True)
+        print("Hulls obtained.")
 
     """ services """
     # set object as head of list
@@ -70,17 +82,24 @@ class armVision:
         self.set_object_list(obj_list)
         self.set_object_list_empty(False)
 
-
+        time = rospy.get_time()
         success = self.get_hulls().success
         if not success:
     		print("Could not get hulls.")
-    	else:
-    		print("Hulls obtained.")
+        else:
+            print("Execute segmentation called.")
         # todo:
         # get image segments/bounding boxes
         # compare pcl and bounding box segments
         # publish final object pos and classes
 
+        r = rospy.Rate(10)
+        while not (self.get_pcl_segment_complete() ):
+            if rospy.get_time()-time > 2:
+                print("Time limit exceeded.")
+                # return false response in service?
+                break
+            r.sleep()
         # reset all flags of complete
         self.set_pcl_segment_complete(False)
         # reset image_segment
@@ -100,10 +119,6 @@ class armVision:
     def is_task_empty(self, req):
         return self.get_object_list_empty()
 
-    def pcl_segment_complete(self, req):
-        self.set_pcl_segment_complete(True)
-        print(" ********************** Reached here ***********************")
-        return True
 
 
 class object:
@@ -124,6 +139,6 @@ if __name__ == '__main__':
     # main loop
     r = rospy.Rate(10)
     while not rospy.is_shutdown():
-        arm_vision.object_lateral_topic.publish(
+        arm_vision.object_lateral_pub.publish(
             arm_vision.get_x(), arm_vision.get_y(), arm_vision.get_obj_class() )
         r.sleep();
