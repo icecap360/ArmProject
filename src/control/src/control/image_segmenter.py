@@ -7,14 +7,17 @@ from sensor_msgs.msg import PointCloud2, Image
 from control.msg import image_points
 from control.srv import doService
 import cv2
-import os
-import time
+# import os
+# import time
+import rospkg
 
 class imageSegmenter:
     def __init__(self):
-        self.weight_path= "models/yolov3.weights"
-        self.config_path= "models/yolov3.cfg"
-        self.labels_path= "models/coco.names"
+        rospack = rospkg.RosPack()
+        dir = rospack.get_path('control') + "/src/control/"
+        self.weight_path= dir + "models/yolov3.weights"
+        self.config_path= dir + "models/yolov3.cfg"
+        self.labels_path= dir + "models/coco.names"
         self.confidence = 0.5
         self.threshold = 0.3
         self.NMS = True
@@ -22,10 +25,14 @@ class imageSegmenter:
         layer_names = self.net.getLayerNames()
         self.layer_names = [layer_names[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
         self.labels = open(self.labels_path).read().strip().split('\n')
+<<<<<<< HEAD
         self.execute = True #set this to false so node does not initially execute 
+=======
+        self.execute = False #set this to false so node does not initially execute
+>>>>>>> d300cdae85e8fc391bf8eb69ed527757f78ec982
         # All SERVICES and TOPICS MUST be created BELOW
         self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.classify_img)
-        self.serv = rospy.Service('get_image_hulls', doService, self.get_image_hulls_srvcb)  
+        self.serv = rospy.Service('get_image_hulls', doService, self.get_image_hulls_srvcb)
         self.pub = rospy.Publisher('image_hulls', image_points, queue_size=1)
         self.image_pub = rospy.Publisher('arm_vision_image', Image, queue_size=1)
 
@@ -52,21 +59,21 @@ class imageSegmenter:
             self.net, self.layer_names, self.labels, self.img, self.confidence, self.threshold)
         self.classes = [self.labels[cid] for cid in self.classIDs]
         self.pub_predictions(self.boxes,self.classes)
-        ### The code below is image publishing code, it can be removed 
+        ### The code below is image publishing code, it can be removed
         colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
         imageBounded = self.draw_bounding_boxes(self.img, display_boxes, self.confidences, self.classIDs, colors, self.labels)
-        cv2.imshow('YOLO Object Detection', self.img)
+        #cv2.imshow('YOLO Object Detection', self.img)
         self.image_pub.publish(
             ros_numpy.image.numpy_to_image(
                 imageBounded, "rgb8"))
-    
+
     def subset_detections(self, l , indexes):
         return [l[i] for i in indexes]
-    def rotate_image(self, image, angle):
-        image_center = tuple(np.array(image.shape[1::-1]) / 2)
-        rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-        result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
-        return result
+    # def rotate_image(self, image, angle):
+    #     image_center = tuple(np.array(image.shape[1::-1]) / 2)
+    #     rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+    #     result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    #     return result
     def get_coordinates(self,box):
         #converts box pixle coordinates to the x,y  coordinates
         centerX,centerY,w,h = box[0],box[1],box[2],box[3]
@@ -85,14 +92,20 @@ class imageSegmenter:
             for coord in coords:
                 msg.x.append(coord[0])
                 msg.y.append(coord[1])
+            print(type(det_classes[i]))
             msg.obj_class.append(det_classes[i])
             #mark the end of detection
             msg.x.append(end_of_det)
             msg.y.append(end_of_det)
             msg.obj_class.append(end_of_det)
+<<<<<<< HEAD
         print(msg)
         self.pub.publish(image_points)
  
+=======
+        self.pub.publish(msg.x, msg.y, str(msg.obj_class))
+
+>>>>>>> d300cdae85e8fc391bf8eb69ed527757f78ec982
     def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
         # Helper for make_predictions
         boxes = []
