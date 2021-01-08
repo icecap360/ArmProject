@@ -76,7 +76,7 @@ pclSegmenter::pclSegmenter () {
 		"/camera/depth/points", queue_size,
 		&pclSegmenter::pcl_subcb, this);
    	ROS_INFO("Node Subscribed");
-  get_hulls_serv = nh.advertiseService("get_hulls", &pclSegmenter::get_hulls_servcb, this);
+  get_hulls_serv = nh.advertiseService("get_pcl_hulls", &pclSegmenter::get_hulls_servcb, this);
   // pcl_segment_complete_serv = nh.serviceClient<control::segmentComplete>("pcl_segment_complete");
 }
 

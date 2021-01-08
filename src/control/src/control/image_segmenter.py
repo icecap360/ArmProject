@@ -27,7 +27,7 @@ class imageSegmenter:
         layer_names = self.net.getLayerNames()
         self.layer_names = [layer_names[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
         self.labels = open(self.labels_path).read().strip().split('\n')
-        self.execute = False #set this to false so node does not initially execute 
+        self.execute = False #set this to false so node does not initially execute
         # All SERVICES and TOPICS MUST be created BELOW
         self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.classify_img)
         self.serv = rospy.Service('get_image_hulls', doService, self.get_image_hulls_srvcb)
@@ -49,6 +49,7 @@ class imageSegmenter:
         self.img = img
         self.yolo()
         self.execute = False #this must be false
+        print("image segmenter ran")
 
     def yolo(self):
         self.img = cv2.resize(self.img,self.yolo_shape)#reshape to 416*416 as per blob
@@ -84,7 +85,7 @@ class imageSegmenter:
         top_right = self.pixle_to_xy((centerX + (w/2), centerY - (h/2)))
         bot_left = self.pixle_to_xy((centerX - (w/2) , centerY + (h/2)))
         bot_right = self.pixle_to_xy((centerX + (w/2), centerY + (h/2)))
-        
+
         return (top_left,top_right,bot_left,bot_right)
     def pub_predictions(self, det_boxes, det_classes):
         # Turns the raw bounding boxes and classes into a msg, and publishes it
@@ -101,8 +102,8 @@ class imageSegmenter:
             msg.x.append(end_of_det)
             msg.y.append(end_of_det)
             msg.obj_class.append(end_of_det)
-        self.pub.publish(image_points)
- 
+        self.pub.publish(msg)
+
     def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
         # Helper for make_predictions
         boxes = []
