@@ -15,7 +15,6 @@ class userInterface:
         return self.start()
     def set_desired_classes(self, desired_classes):
         self.desired_class_list = desired_classes
-        print(self.desired_class_list)
     def start(self):
         if raw_input("Start robot? (y/n) ") == 'y':
             return True
