@@ -61,6 +61,7 @@ add_message_files(
  object_dimension.msg
  arm_parameters.msg
  cluster_points.msg
+ image_points.msg
 )
 
 ## Generate services in the 'srv' folder
