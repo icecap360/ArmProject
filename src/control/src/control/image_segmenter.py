@@ -90,7 +90,8 @@ class imageSegmenter:
         # Turns the raw bounding boxes and classes into a msg, and publishes it
         msg = image_points()
         msg.x, msg.y, msg.obj_class = [],[],[]
-        end_of_det = float('inf') #this should come from the param server
+        end_of_det_num = float('inf') #this should come from the param server
+        end_of_det_str = ''
         for i in range(len(det_boxes)):
             coords = self.get_coordinates(det_boxes[i])
             for coord in coords:
@@ -98,10 +99,10 @@ class imageSegmenter:
                 msg.y.append(coord[1])
             msg.obj_class.append(det_classes[i])
             #mark the end of detection
-            msg.x.append(end_of_det)
-            msg.y.append(end_of_det)
-            msg.obj_class.append(end_of_det)
-        self.pub.publish(image_points)
+            msg.x.append(end_of_det_num)
+            msg.y.append(end_of_det_num)
+            msg.obj_class.append(end_of_det_str)
+        self.pub.publish(msg)
  
     def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
         # Helper for make_predictions
