@@ -13,13 +13,20 @@ import time
 
 class imageSegmenter:
     def __init__(self):
-        self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.saveImg)
-        self.execute =True
+
         self.weight_path= "models/yolov3.weights"
         self.config_path= "models/yolov3.cfg"
         self.labels_path= "models/coco.names"
         self.confidence = 0.5
         self.threshold = 0.3
+        self.net = cv2.dnn.readNetFromDarknet(self.config_path, self.weight_path)
+        layer_names = self.net.getLayerNames()
+        self.layer_names = [layer_names[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
+        self.labels = open(self.labels_path).read().strip().split('\n')
+        # All SERVICES and TOPICS MUST be created BELOW
+        self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.saveImg)
+        self.execute =True       
+        print('yah')
         self.image_pub = rospy.Publisher('arm_vision_image', Image, queue_size=1)
 
     def saveImg(self, ros_cloud):
@@ -38,20 +45,19 @@ class imageSegmenter:
         #print('The current directory of image segmenter is: ')
         #print( os.getcwd())
         self.yolo()
-        self.execute = True
+        self.execute = False #this must be false
 
     def yolo(self):
-        net = cv2.dnn.readNetFromDarknet(self.config_path, self.weight_path)
-        layer_names = net.getLayerNames()
-        layer_names = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
-        #self.img = np.divide(self.img,255.0)
         self.img = cv2.resize(self.img,(416,416))#reshape to 416*416 as per blob
-        #self.img = self.rotate_image(self.img, 180)
-        labels = open(self.labels_path).read().strip().split('\n')
-        colors = np.random.randint(0, 255, size=(len(labels), 3), dtype='uint8')
-        boxes, confidences, classIDs, idxs = self.make_prediction(net, layer_names, labels, self.img, self.confidence, self.threshold)
-        imageBounded = self.draw_bounding_boxes(self.img, boxes, confidences, classIDs, idxs, colors, labels)
-        #print(imageBounded)
+        self.boxes, self.confidences, self.classIDs, self.idxs = self.make_prediction(
+            self.net, self.layer_names, self.labels, self.img, self.confidence, self.threshold)
+        self.classes = [self.labels[cid] for cid in self.classIDs]
+        #idxs contains tha real indexes we plan to keep, this subset should be done in yolo
+        print(self.boxes)
+        print(self.idxs)
+        ### The code below is image printing code, it should be removed in the future
+        colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
+        imageBounded = self.draw_bounding_boxes(self.img, self.boxes, self.confidences, self.classIDs, self.idxs, colors, self.labels)
         cv2.imshow('YOLO Object Detection', self.img)
         self.image_pub.publish(
             ros_numpy.image.numpy_to_image(
