@@ -22,7 +22,7 @@ class imageSegmenter:
         layer_names = self.net.getLayerNames()
         self.layer_names = [layer_names[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
         self.labels = open(self.labels_path).read().strip().split('\n')
-        self.execute = False #set this to false so node does not initially execute 
+        self.execute = True #set this to false so node does not initially execute 
         # All SERVICES and TOPICS MUST be created BELOW
         self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.classify_img)
         self.serv = rospy.Service('get_image_hulls', doService, self.get_image_hulls_srvcb)  
@@ -38,12 +38,10 @@ class imageSegmenter:
             return
         ros_cloud_arr = ros_numpy.point_cloud2.pointcloud2_to_array(ros_cloud)
         xyz = ros_numpy.point_cloud2.get_xyz_points(ros_cloud_arr, remove_nans=False)
+        print(xyz.shape)
         rgb = ros_numpy.point_cloud2.split_rgb_field(ros_cloud_arr)
-        r = rgb['r']
-        g = rgb['g']
-        b=rgb['b']
-        img = np.array([r,g,b]) #shape is 3,480,640
-        img = np.moveaxis(img, 0,2) #shape is 480,640,3
+        img = np.array([rgb['r'],rgb['g'],rgb['b']]) #shape is 3,480,640
+        img = np.moveaxis(img, 0, 2) #shape is 480,640,3
         self.img = img
         self.yolo()
         self.execute = False #this must be false
@@ -92,6 +90,7 @@ class imageSegmenter:
             msg.x.append(end_of_det)
             msg.y.append(end_of_det)
             msg.obj_class.append(end_of_det)
+        print(msg)
         self.pub.publish(image_points)
  
     def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
