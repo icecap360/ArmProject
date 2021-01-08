@@ -13,12 +13,12 @@ import time
 
 class imageSegmenter:
     def __init__(self):
-
         self.weight_path= "models/yolov3.weights"
         self.config_path= "models/yolov3.cfg"
         self.labels_path= "models/coco.names"
         self.confidence = 0.5
         self.threshold = 0.3
+        self.NMS = True
         self.net = cv2.dnn.readNetFromDarknet(self.config_path, self.weight_path)
         layer_names = self.net.getLayerNames()
         self.layer_names = [layer_names[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
@@ -26,7 +26,6 @@ class imageSegmenter:
         # All SERVICES and TOPICS MUST be created BELOW
         self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.saveImg)
         self.execute =True       
-        print('yah')
         self.image_pub = rospy.Publisher('arm_vision_image', Image, queue_size=1)
 
     def saveImg(self, ros_cloud):
@@ -49,15 +48,13 @@ class imageSegmenter:
 
     def yolo(self):
         self.img = cv2.resize(self.img,(416,416))#reshape to 416*416 as per blob
-        self.boxes, self.confidences, self.classIDs, self.idxs = self.make_prediction(
+        self.boxes, self.confidences, self.classIDs = self.make_prediction(
             self.net, self.layer_names, self.labels, self.img, self.confidence, self.threshold)
         self.classes = [self.labels[cid] for cid in self.classIDs]
-        #idxs contains tha real indexes we plan to keep, this subset should be done in yolo
         print(self.boxes)
-        print(self.idxs)
         ### The code below is image printing code, it should be removed in the future
         colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
-        imageBounded = self.draw_bounding_boxes(self.img, self.boxes, self.confidences, self.classIDs, self.idxs, colors, self.labels)
+        imageBounded = self.draw_bounding_boxes(self.img, self.boxes, self.confidences, self.classIDs, colors, self.labels)
         cv2.imshow('YOLO Object Detection', self.img)
         self.image_pub.publish(
             ros_numpy.image.numpy_to_image(
@@ -101,20 +98,25 @@ class imageSegmenter:
         # Extract bounding boxes, confidences and classIDs
         boxes, confidences, classIDs = self.extract_boxes_confidences_classids(outputs, confidence, width, height)
         # Apply Non-Max Suppression
-        idxs = cv2.dnn.NMSBoxes(boxes, confidences, confidence, threshold)
-        return boxes, confidences, classIDs, idxs
+        if self.NMS:
+            idxs = cv2.dnn.NMSBoxes(boxes, confidences, confidence, threshold)
+            if len(idxs)>0:
+                idxs = idxs.flatten()
+                boxes = [boxes[i] for i in idxs]
+                confidences = [confidences[i] for i in idxs]
+                classIDs = [classIDs[i] for i in idxs]
+        return boxes, confidences, classIDs
 
-    def draw_bounding_boxes(self, image, boxes, confidences, classIDs, idxs, colors, labels):
-        if len(idxs) > 0:
-            for i in idxs.flatten():
-                # extract bounding box coordinates
-                x, y = boxes[i][0], boxes[i][1]
-                w, h = boxes[i][2], boxes[i][3]
-                # draw the bounding box and label on the image
-                color = [int(c) for c in colors[classIDs[i]]]
-                cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-                text = "{}: {:.4f}".format(labels[classIDs[i]], confidences[i])
-                cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+    def draw_bounding_boxes(self, image, boxes, confidences, classIDs, colors, labels):
+        for i in range(len(boxes)):
+            # extract bounding box coordinates
+            x, y = boxes[i][0], boxes[i][1]
+            w, h = boxes[i][2], boxes[i][3]
+            # draw the bounding box and label on the image
+            color = [int(c) for c in colors[classIDs[i]]]
+            cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
+            text = "{}: {:.4f}".format(labels[classIDs[i]], confidences[i])
+            cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         # print(len(idxs))
         # print(len(classIDs))
         return image
