@@ -3,3 +3,4 @@
 *.pyc
 *.vscode
 *__pycache__
+*.weights
