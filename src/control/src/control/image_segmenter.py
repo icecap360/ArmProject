@@ -8,14 +8,17 @@ import numpy as np
 from sensor_msgs.msg import PointCloud2, Image
 from control.msg import image_points
 import cv2
-import os
-import time
+# import os
+# import time
+import rospkg
 
 class imageSegmenter:
     def __init__(self):
-        self.weight_path= "models/yolov3.weights"
-        self.config_path= "models/yolov3.cfg"
-        self.labels_path= "models/coco.names"
+        rospack = rospkg.RosPack()
+        dir = rospack.get_path('control') + "/src/control/"
+        self.weight_path= dir + "models/yolov3.weights"
+        self.config_path= dir + "models/yolov3.cfg"
+        self.labels_path= dir + "models/coco.names"
         self.confidence = 0.5
         self.threshold = 0.3
         self.NMS = True
@@ -25,9 +28,9 @@ class imageSegmenter:
         self.labels = open(self.labels_path).read().strip().split('\n')
         # All SERVICES and TOPICS MUST be created BELOW
         self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.saveImg)
-        self.execute =True   
+        self.execute =True
         self.pub = rospy.Publisher('image_segmenter', image_points, queue_size=1)
-    
+
         self.image_pub = rospy.Publisher('arm_vision_image', Image, queue_size=1)
 
     def saveImg(self, ros_cloud):
@@ -50,7 +53,7 @@ class imageSegmenter:
 
     def yolo(self):
         self.img = cv2.resize(self.img,(416,416))#reshape to 416*416 as per blob
-        self.img = self.rotate_image(self.img, 270)
+        #self.img = self.rotate_image(self.img, 270)
         self.boxes, self.confidences, self.classIDs, display_boxes = self.make_prediction(
             self.net, self.layer_names, self.labels, self.img, self.confidence, self.threshold)
         self.classes = [self.labels[cid] for cid in self.classIDs]
@@ -59,16 +62,16 @@ class imageSegmenter:
         ### The code below is image printing code, it should be removed in the future
         colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
         imageBounded = self.draw_bounding_boxes(self.img, display_boxes, self.confidences, self.classIDs, colors, self.labels)
-        cv2.imshow('YOLO Object Detection', self.img)
+        #cv2.imshow('YOLO Object Detection', self.img)
         self.image_pub.publish(
             ros_numpy.image.numpy_to_image(
                 imageBounded, "rgb8"))
-    
-    def rotate_image(self, image, angle):
-        image_center = tuple(np.array(image.shape[1::-1]) / 2)
-        rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-        result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
-        return result
+
+    # def rotate_image(self, image, angle):
+    #     image_center = tuple(np.array(image.shape[1::-1]) / 2)
+    #     rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
+    #     result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+    #     return result
     def get_coordinates(self,box):
         #converts box pixle coordinates to the x,y  coordinates
         centerX,centerY,w,h = box[0],box[1],box[2],box[3]
@@ -91,13 +94,14 @@ class imageSegmenter:
             for coord in coords:
                 msg.x.append(coord[0])
                 msg.y.append(coord[1])
+            print(type(det_classes[i]))
             msg.obj_class.append(det_classes[i])
             #mark the end of detection
             msg.x.append(end_of_det)
             msg.y.append(end_of_det)
             msg.obj_class.append(end_of_det)
-        self.pub.publish(image_points)
- 
+        self.pub.publish(msg.x, msg.y, str(msg.obj_class))
+
     def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
         boxes = []
         confidences = []
