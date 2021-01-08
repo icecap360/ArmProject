@@ -15,6 +15,8 @@ class imageSegmenter:
     def __init__(self):
         rospack = rospkg.RosPack()
         dir = rospack.get_path('control') + "/src/control/"
+        self.point_cloud_shape = (480,640)
+        self.yolo_shape = (416,416)
         self.weight_path= dir + "models/yolov3.weights"
         self.config_path= dir + "models/yolov3.cfg"
         self.labels_path= dir + "models/coco.names"
@@ -25,11 +27,7 @@ class imageSegmenter:
         layer_names = self.net.getLayerNames()
         self.layer_names = [layer_names[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
         self.labels = open(self.labels_path).read().strip().split('\n')
-<<<<<<< HEAD
-        self.execute = True #set this to false so node does not initially execute 
-=======
-        self.execute = False #set this to false so node does not initially execute
->>>>>>> d300cdae85e8fc391bf8eb69ed527757f78ec982
+        self.execute = False #set this to false so node does not initially execute 
         # All SERVICES and TOPICS MUST be created BELOW
         self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.classify_img)
         self.serv = rospy.Service('get_image_hulls', doService, self.get_image_hulls_srvcb)
@@ -44,8 +42,7 @@ class imageSegmenter:
         if not self.execute:
             return
         ros_cloud_arr = ros_numpy.point_cloud2.pointcloud2_to_array(ros_cloud)
-        xyz = ros_numpy.point_cloud2.get_xyz_points(ros_cloud_arr, remove_nans=False)
-        print(xyz.shape)
+        self.xyz = ros_numpy.point_cloud2.get_xyz_points(ros_cloud_arr, remove_nans=False)
         rgb = ros_numpy.point_cloud2.split_rgb_field(ros_cloud_arr)
         img = np.array([rgb['r'],rgb['g'],rgb['b']]) #shape is 3,480,640
         img = np.moveaxis(img, 0, 2) #shape is 480,640,3
@@ -54,7 +51,7 @@ class imageSegmenter:
         self.execute = False #this must be false
 
     def yolo(self):
-        self.img = cv2.resize(self.img,(416,416))#reshape to 416*416 as per blob
+        self.img = cv2.resize(self.img,self.yolo_shape)#reshape to 416*416 as per blob
         self.boxes, self.confidences, self.classIDs, display_boxes = self.make_prediction(
             self.net, self.layer_names, self.labels, self.img, self.confidence, self.threshold)
         self.classes = [self.labels[cid] for cid in self.classIDs]
@@ -74,38 +71,38 @@ class imageSegmenter:
     #     rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
     #     result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
     #     return result
+    def pixle_to_xy(self, coord):
+        ratio_x = self.point_cloud_shape[0]/self.yolo_shape[0]
+        ratio_y = self.point_cloud_shape[1]/self.yolo_shape[1]
+        row_ind = int(coord[0]*ratio_x)
+        col_ind = int(coord[1]*ratio_y)
+        return self.xyz[row_ind][col_ind][0],self.xyz[row_ind][col_ind][1]
     def get_coordinates(self,box):
         #converts box pixle coordinates to the x,y  coordinates
         centerX,centerY,w,h = box[0],box[1],box[2],box[3]
-        top_left = (centerX - (w/2) , centerY - (h/2))
-        top_right = (centerX + (w/2), centerY - (h/2))
-        bot_left = (centerX - (w/2) , centerY + (h/2))
-        bot_right = (centerX + (w/2), centerY + (h/2))
+        top_left = self.pixle_to_xy((centerX - (w/2) , centerY - (h/2)))
+        top_right = self.pixle_to_xy((centerX + (w/2), centerY - (h/2)))
+        bot_left = self.pixle_to_xy((centerX - (w/2) , centerY + (h/2)))
+        bot_right = self.pixle_to_xy((centerX + (w/2), centerY + (h/2)))
+        
         return (top_left,top_right,bot_left,bot_right)
     def pub_predictions(self, det_boxes, det_classes):
         # Turns the raw bounding boxes and classes into a msg, and publishes it
         msg = image_points()
         msg.x, msg.y, msg.obj_class = [],[],[]
-        end_of_det = -100 #this should come from the param server
+        end_of_det = float('inf') #this should come from the param server
         for i in range(len(det_boxes)):
             coords = self.get_coordinates(det_boxes[i])
             for coord in coords:
                 msg.x.append(coord[0])
                 msg.y.append(coord[1])
-            print(type(det_classes[i]))
             msg.obj_class.append(det_classes[i])
             #mark the end of detection
             msg.x.append(end_of_det)
             msg.y.append(end_of_det)
             msg.obj_class.append(end_of_det)
-<<<<<<< HEAD
-        print(msg)
         self.pub.publish(image_points)
  
-=======
-        self.pub.publish(msg.x, msg.y, str(msg.obj_class))
-
->>>>>>> d300cdae85e8fc391bf8eb69ed527757f78ec982
     def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
         # Helper for make_predictions
         boxes = []
