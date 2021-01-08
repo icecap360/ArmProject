@@ -14,7 +14,8 @@ class userInterface:
         self.set_desired_classes(raw_input("Enter space seperated desired classes: ").split() )
         return self.start()
     def set_desired_classes(self, desired_classes):
-        self.desired_classes_list = desired_classes
+        self.desired_class_list = desired_classes
+        print(self.desired_class_list)
     def start(self):
         if raw_input("Start robot? (y/n) ") == 'y':
             return True
