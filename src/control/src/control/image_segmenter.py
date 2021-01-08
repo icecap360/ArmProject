@@ -49,7 +49,7 @@ class imageSegmenter:
         self.img = img
         self.yolo()
         self.execute = False #this must be false
-        print("image segmenter ran")
+        print("Finished execution callback")
 
     def yolo(self):
         self.img = cv2.resize(self.img,self.yolo_shape)#reshape to 416*416 as per blob

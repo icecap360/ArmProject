@@ -71,7 +71,7 @@ pclSegmenter::pclSegmenter () {
 	// init segment_and_publish to off
 	go_segment_and_publish = false;
 	// init publishers, subscribers, and services
-  cloud_hull_pub = nh.advertise<control::cluster_points>("cloud_hull", 10);
+  cloud_hull_pub = nh.advertise<control::cluster_points>("cloud_hulls", 10);
   pcl_sub = nh.subscribe<sensor_msgs::PointCloud2> (
 		"/camera/depth/points", queue_size,
 		&pclSegmenter::pcl_subcb, this);

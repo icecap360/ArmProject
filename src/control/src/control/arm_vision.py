@@ -15,7 +15,7 @@ from control.msg import (
 class armVision:
     def __init__(self):
         self.object_lateral_pub = rospy.Publisher('object_lateral', object_lateral, queue_size=10)
-        self.cloud_hull_sub = rospy.Subscriber('cloud_hull', cluster_points, self.pcl_segment_complete_subcb)
+        self.cloud_hull_sub = rospy.Subscriber('cloud_hulls', cluster_points, self.pcl_segment_complete_subcb)
         self.image_hull_sub = rospy.Subscriber('image_hulls', image_points, self.image_segment_complete_subcb)
         self.analyze_serv = rospy.Service('locate_all_objects', doService, self.locate_all_objects)
         self.set_object_serv = rospy.Service('set_object', doService, self.set_object)
