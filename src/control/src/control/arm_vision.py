@@ -8,21 +8,25 @@ from control.srv import (
 )
 from control.msg import (
     object_lateral,
-    cluster_points
+    cluster_points,
+    image_points
 )
 
 class armVision:
     def __init__(self):
         self.object_lateral_pub = rospy.Publisher('object_lateral', object_lateral, queue_size=10)
-        self.cloud_hull_sub = rospy.Subscriber('cloud_hull', cluster_points, self.pcl_segment_complete_subcb)
+        self.cloud_hull_sub = rospy.Subscriber('cloud_hulls', cluster_points, self.pcl_segment_complete_subcb)
+        self.image_hull_sub = rospy.Subscriber('image_hulls', image_points, self.image_segment_complete_subcb)
         self.analyze_serv = rospy.Service('locate_all_objects', doService, self.locate_all_objects)
         self.set_object_serv = rospy.Service('set_object', doService, self.set_object)
         self.complete_task_serv = rospy.Service('set_task_complete', doService, self.set_task_complete)
         self.is_empty_serv = rospy.Service('is_task_empty', isTaskEmpty, self.is_task_empty)
         # self.pcl_segment_complete_serv = rospy.Service('pcl_segment_complete', segmentComplete, self.pcl_segment_complete)
 
-        rospy.wait_for_service('get_hulls')
-        self.get_hulls = rospy.ServiceProxy('get_hulls', doService)
+        rospy.wait_for_service('get_pcl_hulls')
+        self.get_pcl_hulls = rospy.ServiceProxy('get_pcl_hulls', doService)
+        rospy.wait_for_service('get_image_hulls')
+        self.get_image_hulls = rospy.ServiceProxy('get_image_hulls', doService)
 
         self.object_list = []
         self.object_list_empty = True
@@ -58,11 +62,16 @@ class armVision:
         self.object_list_empty = empty
     def set_pcl_segment_complete(self, complete):
         self.pcl_segment_complete = complete
+    def set_image_segment_complete(self, complete):
+        self.image_segment_complete = complete
 
     """ subscriber callbacks """
     def pcl_segment_complete_subcb(self, cloud_hull):
         self.set_pcl_segment_complete(True)
-        print("Hulls obtained.")
+        print("Pcl hulls obtained.")
+    def image_segment_complete_subcb(self, image_hull):
+        self.set_image_segment_complete(True)
+        print("Image hulls obtained.")
 
     """ services """
     # set object as head of list
@@ -82,19 +91,27 @@ class armVision:
         self.set_object_list(obj_list)
         self.set_object_list_empty(False)
 
+        # start timer for segmentation limit time
         time = rospy.get_time()
-        success = self.get_hulls().success
+        # start execution of segmenters
+        success = self.get_pcl_hulls().success
         if not success:
-    		print("Could not get hulls.")
+    		print("Could not get pcl hulls.")
         else:
-            print("Execute segmentation called.")
+            print("Execute pcl segmentation called.")
+        success = self.get_image_hulls().success
+        if not success:
+    		print("Could not get image hulls.")
+        else:
+            print("Execute image segmentation called.")
         # todo:
         # get image segments/bounding boxes
         # compare pcl and bounding box segments
         # publish final object pos and classes
 
         r = rospy.Rate(10)
-        while not (self.get_pcl_segment_complete() ):
+        while not (self.get_pcl_segment_complete() and
+                   self.get_image_segment_complete() ):
             if rospy.get_time()-time > 2:
                 print("Time limit exceeded.")
                 # return false response in service?
