@@ -21,6 +21,8 @@
   <node pkg="control" type="move.py" name="move" respawn="true"/>
   <node pkg="control" type="calculate_dimension.py" name="calculate_dimension" respawn="true"/>
   <node pkg="control" type="has_object.py" name="has_object" respawn="true"/>
+  <node pkg="control" type="pcl_segmenter.cpp" name="pcl_segmenter" respawn="true"/>
+  <node pkg="control" type="image_segmenter.py" name="image_segmenter" respawn="true"/>
 
   <!-- example client -->
   <!--node pkg="control" type="client_ex.py" name="client_ex"

@@ -160,7 +160,7 @@ class imageSegmenter:
         return image
 
 if __name__ == '__main__':
-    rospy.init_node('imageSegmenter', anonymous=True)
+    rospy.init_node('image_segmenter', anonymous=True)
     image_segmenter = imageSegmenter()
     # main loop
     rospy.spin()
