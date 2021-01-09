@@ -18,7 +18,7 @@ def process_do_service(success, fail_msg, succ_msg=None):
 	#success = services.call_move_to_neutral_pose()
 	if not success:
 		fail_error(fail_msg)
-	else:
+	elif succ_msg != None:
 		print(succ_msg)
 def fail_error(mssg):
 	fail = 'FAIL:'+mssg+', ABORTING'

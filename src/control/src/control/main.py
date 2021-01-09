@@ -13,7 +13,7 @@ if __name__ == '__main__':
 	initState = neutral_pose
 	currentState = initState
 	currentState.entry()
-	r = rospy.Rate(10)
+	r = rospy.Rate(2)
 	while not rospy.is_shutdown():
 		transitions = finite_state_machine[currentState]
 		r.sleep()
