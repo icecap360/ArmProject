@@ -27,7 +27,7 @@ class imageSegmenter:
         layer_names = self.net.getLayerNames()
         self.layer_names = [layer_names[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
         self.labels = open(self.labels_path).read().strip().split('\n')
-        self.execute = False #set this to false so node does not initially execute
+        self.execute = True #set this to false so node does not initially execute
         # All SERVICES and TOPICS MUST be created BELOW
         self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.classify_img)
         self.serv = rospy.Service('get_image_hulls', doService, self.get_image_hulls_srvcb)
@@ -47,36 +47,66 @@ class imageSegmenter:
         img = np.array([rgb['r'],rgb['g'],rgb['b']]) #shape is 3,480,640
         img = np.moveaxis(img, 0, 2) #shape is 480,640,3
         self.img = img
+        self.height, self.width = self.img.shape[:2]
         self.yolo()
-        self.execute = False #this must be false
+        self.execute = True #this must be false
         print("Finished execution callback")
 
     def yolo(self):
-        self.img = cv2.resize(self.img,self.yolo_shape)#reshape to 416*416 as per blob
         self.boxes, self.confidences, self.classIDs, display_boxes = self.make_prediction(
             self.net, self.layer_names, self.labels, self.img, self.confidence, self.threshold)
         self.classes = [self.labels[cid] for cid in self.classIDs]
-        self.pub_predictions(self.boxes,self.classes)
+        self.image_segments = self.make_contour_hulls()
+
+        # --- for bounding box 
+        #   extract the image
+        #   get contours in image
+        #   get convex contour hull in image
+        #   shrink the contour hull in image
+        # return a list of convex hulls ----
+        # --- turn each contour hull into a xyz coordinate ---
+        # publish that list of convex hulls (same size/indexing as boxes)
+        
+        #self.pub_predictions(self.boxes,self.classes)
         ### The code below is image publishing code, it can be removed
-        colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
-        imageBounded = self.draw_bounding_boxes(self.img, display_boxes, self.confidences, self.classIDs, colors, self.labels)
-        #cv2.imshow('YOLO Object Detection', self.img)
-        self.image_pub.publish(
-            ros_numpy.image.numpy_to_image(
-                imageBounded, "rgb8"))
+        #colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
+        #imageBounded = self.draw_bounding_boxes(self.img, display_boxes, self.confidences, self.classIDs, colors, self.labels)
+        #self.image_pub.publish(
+        #    ros_numpy.image.numpy_to_image(
+        #        imageBounded, "rgb8"))
+
+    def make_contour_hulls(self):
+        hulls = []
+        for box in self.boxes:
+            #get the corners of the box 
+            centerX,centerY,w,h = box[0],box[1],box[2],box[3]
+            top_left_row,top_left_col = self.pixel_to_index((centerX - (w//2) , centerY - (h//2)))
+            bot_right_row, bot_right_col = self.pixel_to_index((centerX + (w//2), centerY + (h//2)))
+            #get the bounded image from the 
+            image_cropped =  self.img[
+                top_left_row:bot_right_row,
+                top_left_col:bot_right_col, :]
+            
+            print(image_cropped.shape)
+            self.image_pub.publish(
+                ros_numpy.image.numpy_to_image(
+                image_cropped, "rgb8"))
+            break
+        return hulls
 
     def subset_detections(self, l , indexes):
         return [l[i] for i in indexes]
-    # def rotate_image(self, image, angle):
-    #     image_center = tuple(np.array(image.shape[1::-1]) / 2)
-    #     rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-    #     result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
-    #     return result
+    def pixel_to_index(self, coord):
+        x = int(coord[0])
+        col_ind = min(x,self.width-1)
+        col_ind = max(col_ind,0)
+        y = int(coord[1])
+        row_ind = min(y,self.height-1)
+        row_ind = max(row_ind,0)
+        return row_ind, col_ind
     def pixle_to_xy(self, coord):
-        ratio_x = self.point_cloud_shape[0]/self.yolo_shape[0]
-        ratio_y = self.point_cloud_shape[1]/self.yolo_shape[1]
-        row_ind = int(coord[0]*ratio_x)
-        col_ind = int(coord[1]*ratio_y)
+        row_ind, col_ind = self.pixel_to_index(coord)
+        #why does this execute 16 times?
         return self.xyz[row_ind][col_ind][0],self.xyz[row_ind][col_ind][1]
     def get_coordinates(self,box):
         #converts box pixle coordinates to the x,y  coordinates
@@ -85,7 +115,6 @@ class imageSegmenter:
         top_right = self.pixle_to_xy((centerX + (w/2), centerY - (h/2)))
         bot_left = self.pixle_to_xy((centerX - (w/2) , centerY + (h/2)))
         bot_right = self.pixle_to_xy((centerX + (w/2), centerY + (h/2)))
-
         return (top_left,top_right,bot_left,bot_right)
     def pub_predictions(self, det_boxes, det_classes):
         # Turns the raw bounding boxes and classes into a msg, and publishes it
@@ -120,9 +149,12 @@ class imageSegmenter:
                 # Consider only the predictions that are above the confidence threshold
                 if conf > confidence:
                     # Scale the bounding box back to the size of the image
+                    print 'Detection: ',detection[0:4]
                     box = detection[0:4] * np.array([width, height, width, height])
                     centerX, centerY, w, h = box.astype('int')
                     boxes.append([centerX, centerY, w, h])
+                    print 'width ',width, 'height', height
+                    print 'Box: ', boxes[-1]
                     # Use the center coordinates, width and height to get the coordinates of the top left corner
                     x = int(centerX - (w / 2))
                     y = int(centerY - (h / 2))
@@ -149,8 +181,10 @@ class imageSegmenter:
         return boxes, confidences, classIDs, display_boxes
 
     def draw_bounding_boxes(self, image, boxes, confidences, classIDs, colors, labels):
+        # In order for following cv2 to operate on an image it must UMat,
+        # but it is converted back into numpy array later on. See https://github.com/opencv/opencv/issues/14866
+        image = cv2.UMat(image)
         for i in range(len(boxes)):
-            # extract bounding box coordinates
             x, y = boxes[i][0], boxes[i][1]
             w, h = boxes[i][2], boxes[i][3]
             # draw the bounding box and label on the image
@@ -158,6 +192,7 @@ class imageSegmenter:
             cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
             text = "{}: {:.4f}".format(labels[classIDs[i]], confidences[i])
             cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        image = image.get()
         return image
 
 if __name__ == '__main__':
