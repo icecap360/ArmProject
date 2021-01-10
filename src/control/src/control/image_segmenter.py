@@ -82,12 +82,38 @@ class imageSegmenter:
             centerX,centerY,w,h = box[0],box[1],box[2],box[3]
             top_left_row,top_left_col = self.pixel_to_index((centerX - (w//2) , centerY - (h//2)))
             bot_right_row, bot_right_col = self.pixel_to_index((centerX + (w//2), centerY + (h//2)))
-            #get the bounded image from the 
+            #get the cropped image from the corners 
             image_cropped =  self.img[
                 top_left_row:bot_right_row,
                 top_left_col:bot_right_col, :]
+            #Binarize the image, so that the background is ignored. There are 3 ways
+            #1. Specifically threshold the image to the gray background
+                #so for example is an image showed veriation in any channel away from gray, it would show. This option commented out.
+            #thresh = cv2.threshold(image_cropped, 100 ,255, cv2.THRESH_BINARY)[1] #set threshold as 100 cause dar gray is 105
+            #gray=cv2.cvtColor(thresh,cv2.COLOR_BGR2GRAY)
+            #edged=cv2.Canny(gray,30,200)
+
+            #another  options include filter small contours (smaller contours typically in background)
             
-            print(image_cropped.shape)
+            #We choose the option to threshold the image after binarizing, this option is common online 
+            gray=cv2.cvtColor(image_cropped,cv2.COLOR_BGR2GRAY)
+            thresh = cv2.threshold(gray, 100 ,255, cv2.THRESH_BINARY)[1] #125 is threshold online, it did not work, so I choose 100
+            edged=cv2.Canny(thresh,30,200)
+            #Now find all the contours
+            contours, hierarchy=cv2.findContours(edged,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)
+            #There is only one object, so all the contours have to do with one object            
+            all_contours = np.concatenate(contours)
+            #Using convex hulls, alot of the interior shape is lost, so instaed a polydon was formed
+            epsilon = 0.003*cv2.arcLength(all_contours,True) # 0.003 gives 90 points, 0.005 gives 70
+            hull = cv2.approxPolyDP(all_contours,epsilon,True)
+            print hull.size
+            #draw the contours and publish the image
+            image_cropped = cv2.UMat(image_cropped)
+            cv2.drawContours(image_cropped,[hull],-1,(0,255,0),3)
+            image_cropped = image_cropped.get()
+            print 'Number of contours: ', len(contours)
+            print 'Hierarchy: ', hierarchy 
+            
             self.image_pub.publish(
                 ros_numpy.image.numpy_to_image(
                 image_cropped, "rgb8"))
