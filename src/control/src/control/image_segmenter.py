@@ -57,6 +57,7 @@ class imageSegmenter:
             self.net, self.layer_names, self.labels, self.img, self.confidence, self.threshold)
         self.classes = [self.labels[cid] for cid in self.classIDs]
         self.image_segments = self.make_contour_hulls()
+
         # --- for bounding box 
         #   extract the image
         #   get contours in image
@@ -66,27 +67,36 @@ class imageSegmenter:
         # --- turn each contour hull into a xyz coordinate ---
         # publish that list of convex hulls (same size/indexing as boxes)
         
-        self.pub_predictions(self.boxes,self.classes)
+        #self.pub_predictions(self.boxes,self.classes)
         ### The code below is image publishing code, it can be removed
-        colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
-        imageBounded = self.draw_bounding_boxes(self.img, display_boxes, self.confidences, self.classIDs, colors, self.labels)
-        self.image_pub.publish(
-            ros_numpy.image.numpy_to_image(
-                imageBounded, "rgb8"))
+        #colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
+        #imageBounded = self.draw_bounding_boxes(self.img, display_boxes, self.confidences, self.classIDs, colors, self.labels)
+        #self.image_pub.publish(
+        #    ros_numpy.image.numpy_to_image(
+        #        imageBounded, "rgb8"))
 
     def make_contour_hulls(self):
         hulls = []
         for box in self.boxes:
+            #get the corners of the box 
             centerX,centerY,w,h = box[0],box[1],box[2],box[3]
-            top_left = self.pixle_to_xy((centerX - (w//2) , centerY - (h//2)))
-            top_right = self.pixle_to_xy((centerX + (w//2), centerY - (h//2)))
-            bot_left = self.pixle_to_xy((centerX - (w//2) , centerY + (h//2)))
-            bot_right = self.pixle_to_xy((centerX + (w//2), centerY + (h//2)))
+            top_left_row,top_left_col = self.pixel_to_index((centerX - (w//2) , centerY - (h//2)))
+            bot_right_row, bot_right_col = self.pixel_to_index((centerX + (w//2), centerY + (h//2)))
+            #get the bounded image from the 
+            image_cropped =  self.img[
+                top_left_row:bot_right_row,
+                top_left_col:bot_right_col, :]
+            
+            print(image_cropped.shape)
+            self.image_pub.publish(
+                ros_numpy.image.numpy_to_image(
+                image_cropped, "rgb8"))
+            break
         return hulls
 
     def subset_detections(self, l , indexes):
         return [l[i] for i in indexes]
-    def validate_pixel(self, coord):
+    def pixel_to_index(self, coord):
         x = int(coord[0])
         col_ind = min(x,self.width-1)
         col_ind = max(col_ind,0)
@@ -95,15 +105,16 @@ class imageSegmenter:
         row_ind = max(row_ind,0)
         return row_ind, col_ind
     def pixle_to_xy(self, coord):
-        row_ind, col_ind = self.validate_pixel(coord)
+        row_ind, col_ind = self.pixel_to_index(coord)
+        #why does this execute 16 times?
         return self.xyz[row_ind][col_ind][0],self.xyz[row_ind][col_ind][1]
     def get_coordinates(self,box):
         #converts box pixle coordinates to the x,y  coordinates
         centerX,centerY,w,h = box[0],box[1],box[2],box[3]
-        top_left = self.pixle_to_xy((centerX - (w//2) , centerY - (h//2)))
-        top_right = self.pixle_to_xy((centerX + (w//2), centerY - (h//2)))
-        bot_left = self.pixle_to_xy((centerX - (w//2) , centerY + (h//2)))
-        bot_right = self.pixle_to_xy((centerX + (w//2), centerY + (h//2)))
+        top_left = self.pixle_to_xy((centerX - (w/2) , centerY - (h/2)))
+        top_right = self.pixle_to_xy((centerX + (w/2), centerY - (h/2)))
+        bot_left = self.pixle_to_xy((centerX - (w/2) , centerY + (h/2)))
+        bot_right = self.pixle_to_xy((centerX + (w/2), centerY + (h/2)))
         return (top_left,top_right,bot_left,bot_right)
     def pub_predictions(self, det_boxes, det_classes):
         # Turns the raw bounding boxes and classes into a msg, and publishes it
