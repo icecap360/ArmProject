@@ -53,10 +53,19 @@ class imageSegmenter:
         print("Finished execution callback")
 
     def yolo(self):
-        #self.img = cv2.resize(self.img,self.yolo_shape)#reshape to 416*416 as per blob
         self.boxes, self.confidences, self.classIDs, display_boxes = self.make_prediction(
             self.net, self.layer_names, self.labels, self.img, self.confidence, self.threshold)
         self.classes = [self.labels[cid] for cid in self.classIDs]
+        self.image_segments = self.make_contour_hulls()
+        # --- for bounding box 
+        #   extract the image
+        #   get contours in image
+        #   get convex contour hull in image
+        #   shrink the contour hull in image
+        # return a list of convex hulls ----
+        # --- turn each contour hull into a xyz coordinate ---
+        # publish that list of convex hulls (same size/indexing as boxes)
+        
         self.pub_predictions(self.boxes,self.classes)
         ### The code below is image publishing code, it can be removed
         colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
@@ -65,21 +74,28 @@ class imageSegmenter:
             ros_numpy.image.numpy_to_image(
                 imageBounded, "rgb8"))
 
+    def make_contour_hulls(self):
+        hulls = []
+        for box in self.boxes:
+            centerX,centerY,w,h = box[0],box[1],box[2],box[3]
+            top_left = self.pixle_to_xy((centerX - (w//2) , centerY - (h//2)))
+            top_right = self.pixle_to_xy((centerX + (w//2), centerY - (h//2)))
+            bot_left = self.pixle_to_xy((centerX - (w//2) , centerY + (h//2)))
+            bot_right = self.pixle_to_xy((centerX + (w//2), centerY + (h//2)))
+        return hulls
+
     def subset_detections(self, l , indexes):
         return [l[i] for i in indexes]
-    # def rotate_image(self, image, angle):
-    #     image_center = tuple(np.array(image.shape[1::-1]) / 2)
-    #     rot_mat = cv2.getRotationMatrix2D(image_center, angle, 1.0)
-    #     result = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
-    #     return result
-    def pixle_to_xy(self, coord):
-        #first make sure that the pixles are valid indices, then get xyz
+    def validate_pixel(self, coord):
         x = int(coord[0])
         col_ind = min(x,self.width-1)
         col_ind = max(col_ind,0)
         y = int(coord[1])
         row_ind = min(y,self.height-1)
         row_ind = max(row_ind,0)
+        return row_ind, col_ind
+    def pixle_to_xy(self, coord):
+        row_ind, col_ind = self.validate_pixel(coord)
         return self.xyz[row_ind][col_ind][0],self.xyz[row_ind][col_ind][1]
     def get_coordinates(self,box):
         #converts box pixle coordinates to the x,y  coordinates
@@ -89,7 +105,6 @@ class imageSegmenter:
         bot_left = self.pixle_to_xy((centerX - (w//2) , centerY + (h//2)))
         bot_right = self.pixle_to_xy((centerX + (w//2), centerY + (h//2)))
         return (top_left,top_right,bot_left,bot_right)
-
     def pub_predictions(self, det_boxes, det_classes):
         # Turns the raw bounding boxes and classes into a msg, and publishes it
         msg = image_points()
