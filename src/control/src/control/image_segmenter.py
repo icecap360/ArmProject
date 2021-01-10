@@ -49,11 +49,11 @@ class imageSegmenter:
         self.img = img
         self.height, self.width = self.img.shape[:2]
         self.yolo()
-        self.execute = False #this must be false
+        self.execute = True #this must be false
         print("Finished execution callback")
 
     def yolo(self):
-        self.img = cv2.resize(self.img,self.yolo_shape)#reshape to 416*416 as per blob
+        #self.img = cv2.resize(self.img,self.yolo_shape)#reshape to 416*416 as per blob
         self.boxes, self.confidences, self.classIDs, display_boxes = self.make_prediction(
             self.net, self.layer_names, self.labels, self.img, self.confidence, self.threshold)
         self.classes = [self.labels[cid] for cid in self.classIDs]
@@ -61,7 +61,6 @@ class imageSegmenter:
         ### The code below is image publishing code, it can be removed
         colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
         imageBounded = self.draw_bounding_boxes(self.img, display_boxes, self.confidences, self.classIDs, colors, self.labels)
-        #cv2.imshow('YOLO Object Detection', self.img)
         self.image_pub.publish(
             ros_numpy.image.numpy_to_image(
                 imageBounded, "rgb8"))
@@ -77,11 +76,10 @@ class imageSegmenter:
         #first make sure that the pixles are valid indices, then get xyz
         x = int(coord[0])
         col_ind = min(x,self.width-1)
-        col_ind = max(x,0)
+        col_ind = max(col_ind,0)
         y = int(coord[1])
         row_ind = min(y,self.height-1)
-        row_ind = max(y,0)
-        print row_ind,col_ind
+        row_ind = max(row_ind,0)
         return self.xyz[row_ind][col_ind][0],self.xyz[row_ind][col_ind][1]
     def get_coordinates(self,box):
         #converts box pixle coordinates to the x,y  coordinates
@@ -125,11 +123,12 @@ class imageSegmenter:
                 # Consider only the predictions that are above the confidence threshold
                 if conf > confidence:
                     # Scale the bounding box back to the size of the image
-                    print detection[0:4]
+                    print 'Detection: ',detection[0:4]
                     box = detection[0:4] * np.array([width, height, width, height])
                     centerX, centerY, w, h = box.astype('int')
                     boxes.append([centerX, centerY, w, h])
-                    print box, boxes[-1]
+                    print 'width ',width, 'height', height
+                    print 'Box: ', boxes[-1]
                     # Use the center coordinates, width and height to get the coordinates of the top left corner
                     x = int(centerX - (w / 2))
                     y = int(centerY - (h / 2))
@@ -156,8 +155,10 @@ class imageSegmenter:
         return boxes, confidences, classIDs, display_boxes
 
     def draw_bounding_boxes(self, image, boxes, confidences, classIDs, colors, labels):
+        # In order for following cv2 to operate on an image it must UMat,
+        # but it is converted back into numpy array later on. See https://github.com/opencv/opencv/issues/14866
+        image = cv2.UMat(image)
         for i in range(len(boxes)):
-            # extract bounding box coordinates
             x, y = boxes[i][0], boxes[i][1]
             w, h = boxes[i][2], boxes[i][3]
             # draw the bounding box and label on the image
@@ -165,6 +166,7 @@ class imageSegmenter:
             cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
             text = "{}: {:.4f}".format(labels[classIDs[i]], confidences[i])
             cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+        image = image.get()
         return image
 
 if __name__ == '__main__':
