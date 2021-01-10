@@ -226,7 +226,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr pclSegmenter::concave_hull (
 
 	seg.setInputCloud (cloud_filtered);
 	seg.segment (*inliers, *coefficients);
-	std::cerr << "PointCloud after segmentation has: "
+	std::cout << "PointCloud after segmentation has: "
 						<< inliers->indices.size () << " inliers." << std::endl;
 
 	// Project the model inliers
@@ -236,7 +236,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr pclSegmenter::concave_hull (
 	proj.setInputCloud (cloud_filtered);
 	proj.setModelCoefficients (coefficients);
 	proj.filter (*cloud_projected);
-	std::cerr << "PointCloud after projection has: "
+	std::cout << "PointCloud after projection has: "
 						<< cloud_projected->size () << " data points." << std::endl;
 
 	// Create a Concave Hull representation of the projected inliers
