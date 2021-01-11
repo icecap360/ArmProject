@@ -124,15 +124,19 @@ class imageSegmenter:
             #offset hull back into the orignal image
             hull[:,:,0] += top_left_col
             hull[:,:,1] += top_left_row
-            #draw the contours and publish the image
-            image_cropped = cv2.UMat(self.img)
-            cv2.drawContours(image_cropped,hull,-1,(0,255,0),15)
-            image_cropped = image_cropped.get()
             
-            self.image_pub.publish(
-                ros_numpy.image.numpy_to_image(
-                image_cropped, "rgb8"))
-            break
+            hulls.append(hull)
+            
+        #draw the contours and publish the image
+        hulls = np.concatenate(np.array(hulls))
+        print hulls.shape
+        image_cropped = cv2.UMat(self.img)
+        cv2.drawContours(image_cropped,hulls,-1,(0,255,0),15)
+        image_cropped = image_cropped.get()
+        self.image_pub.publish(
+            ros_numpy.image.numpy_to_image(
+            image_cropped, "rgb8"))
+
         return hulls
 
     def subset_detections(self, l , indexes):
