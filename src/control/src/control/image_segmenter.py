@@ -99,6 +99,15 @@ class imageSegmenter:
             image_cropped =  self.img[
                 top_left_row:bot_right_row,
                 top_left_col:bot_right_col, :]
+            kernel = np.ones((20,20),np.uint8)
+            old_image_cropped = image_cropped.copy()
+            image_cropped = cv2.dilate(image_cropped,kernel,iterations = 1)
+            self.image_pub.publish(
+                ros_numpy.image.numpy_to_image(
+                image_cropped, "rgb8"))
+            break
+            
+            
             #Binarize the image, so that the background is ignored. There are 3 ways
             #1. Specifically threshold the image to the gray background
                 #so for example is an image showed veriation in any channel away from gray, it would show. This option commented out.
@@ -122,9 +131,9 @@ class imageSegmenter:
             interior_hull = self.find_points_inside(all_contours)
             print interior_hull.shape
             #draw the contours and publish the image
-            image_cropped = cv2.UMat(image_cropped)
-            cv2.drawContours(image_cropped,all_contours,-1,(0,255,0),1)
-            image_cropped = image_cropped.get()
+            image_cropped = cv2.UMat(old_image_cropped)
+            cv2.drawContours(old_image_cropped,all_contours,-1,(0,255,0),1)
+            image_cropped = old_image_cropped#.get()
             
             self.image_pub.publish(
                 ros_numpy.image.numpy_to_image(
