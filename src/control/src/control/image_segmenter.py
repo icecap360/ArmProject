@@ -8,7 +8,7 @@ from control.msg import image_points
 from control.srv import doService
 import cv2
 import random
-from shapely.geometry import Polygon, Point
+import pyclipper
 # import os
 # import time
 import rospkg
@@ -77,17 +77,17 @@ class imageSegmenter:
         #    ros_numpy.image.numpy_to_image(
         #        imageBounded, "rgb8"))
     def find_points_inside(self, hull, nx=25, ny=25):
-        poly = Polygon(np.squeeze(hull))
-        minx, miny, maxx, maxy = poly.bounds
-        x = np.linspace(minx,maxx,nx)
-        y = np.linspace(miny,maxy,ny)
+        pco = pyclipper.PyclipperOffset()
         print np.squeeze(hull).shape
-        interior_points = []
-        for i in x:
-            for j in y:
-                if cv2.pointPolygonTest(hull, (i,j), False)>0:
-                    interior_points.append([[i, j]])
-        return np.array(interior_points, dtype=np.int32)
+        pco.AddPath(np.squeeze(hull), pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
+        shrinken_hull = pco.Execute(-20.0)
+        result = []
+        for shape in shrinken_hull:
+            for i in shape:
+                result.append(i)
+        result = np.array(result, dtype=np.int32)
+        result = np.expand_dims(result, 1)
+        return result
     def make_contour_hulls(self):
         hulls = []
         for box in self.boxes:
@@ -113,17 +113,17 @@ class imageSegmenter:
             thresh = cv2.threshold(gray, 100 ,255, cv2.THRESH_BINARY)[1] #125 is threshold online, it did not work, so I choose 100
             edged=cv2.Canny(thresh,30,200)
             #Now find all the contours
-            contours, hierarchy=cv2.findContours(edged,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+            contours, hierarchy=cv2.findContours(edged,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
             #There is only one object, so all the contours have to do with one object            
             all_contours = np.concatenate(contours)
             #Using convex hulls, alot of the interior shape is lost, so instaed a polydon was formed
             epsilon = 0.0004*cv2.arcLength(all_contours,True) # 0.001 gives 90 points, 0.005 gives 70
             hull = cv2.approxPolyDP(all_contours,epsilon,True)
-            interior_hull = self.find_points_inside(hull)
+            interior_hull = self.find_points_inside(all_contours)
             print interior_hull.shape
             #draw the contours and publish the image
             image_cropped = cv2.UMat(image_cropped)
-            cv2.drawContours(image_cropped,interior_hull,-1,(0,255,0),15)
+            cv2.drawContours(image_cropped,all_contours,-1,(0,255,0),1)
             image_cropped = image_cropped.get()
             
             self.image_pub.publish(
