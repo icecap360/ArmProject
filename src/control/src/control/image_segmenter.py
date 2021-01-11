@@ -7,10 +7,6 @@ from sensor_msgs.msg import PointCloud2, Image
 from control.msg import image_points
 from control.srv import doService
 import cv2
-import random
-import pyclipper
-# import os
-# import time
 import rospkg
 
 class imageSegmenter:
@@ -49,30 +45,14 @@ class imageSegmenter:
         self.height, self.width = img.shape[:2]
         boxes, confidences, classes = self.make_prediction(self.net, self.labels,img,self.confidence,self.threshold)
         image_segments = self.make_contour_hulls(img, boxes)
+        image_segments = self.index_to_xy(image_segments, xyz)
+
         # --- turn each contour hull into a xyz coordinate ---
         # publish that list of convex hulls (same size/indexing as boxes)
         #self.pub_predictions(self.boxes,self.classes)
     
         self.execute = True #this must be false
-        print("Finished execution callback")
-
-    def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
-        # Helper for make_predictions
-        boxes = []
-        confidences = []
-        classIDs = []
-        for output in outputs:
-            for detection in output:
-                scores = detection[5:]
-                classID = np.argmax(scores)
-                conf = scores[classID]
-                if conf > confidence:
-                    box = detection[0:4] * np.array([width, height, width, height])
-                    centerX, centerY, w, h = box.astype('int')
-                    boxes.append([centerX, centerY, w, h])
-                    confidences.append(float(conf))
-                    classIDs.append(classID)
-        return boxes, confidences, classIDs
+        print("Finished making image segmentations")
 
     def make_prediction(self, net, labels, image, confidence, threshold):
         layer_names = net.getLayerNames()
@@ -92,6 +72,25 @@ class imageSegmenter:
                 classIDs = self.subset_detections(classIDs, idxs)
         classes = [labels[cid] for cid in classIDs]
         return boxes, confidences, classes
+    def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
+        # Helper for make_predictions
+        boxes = []
+        confidences = []
+        classIDs = []
+        for output in outputs:
+            for detection in output:
+                scores = detection[5:]
+                classID = np.argmax(scores)
+                conf = scores[classID]
+                if conf > confidence:
+                    box = detection[0:4] * np.array([width, height, width, height])
+                    centerX, centerY, w, h = box.astype('int')
+                    boxes.append([centerX, centerY, w, h])
+                    confidences.append(float(conf))
+                    classIDs.append(classID)
+        return boxes, confidences, classIDs
+    def subset_detections(self, l , indexes):
+        return [l[i] for i in indexes]
 
     def make_contour_hulls(self, img, boxes):
         hulls = []
@@ -134,7 +133,6 @@ class imageSegmenter:
             
         #draw the contours and publish the image
         hullsss = np.concatenate(np.array(hulls))
-        print hullsss.shape
         image_cropped = cv2.UMat(img)
         cv2.drawContours(image_cropped,hullsss,-1,(0,255,0),15)
         image_cropped = image_cropped.get()
@@ -143,9 +141,6 @@ class imageSegmenter:
             image_cropped, "rgb8"))
 
         return hulls
-
-    def subset_detections(self, l , indexes):
-        return [l[i] for i in indexes]
     def pixel_to_index(self, coord):
         x = int(coord[0])
         col_ind = min(x,self.width-1)
@@ -154,18 +149,21 @@ class imageSegmenter:
         row_ind = min(y,self.height-1)
         row_ind = max(row_ind,0)
         return row_ind, col_ind
-    def pixle_to_xy(self, coord):
-        row_ind, col_ind = self.pixel_to_index(coord)
-        #why does this execute 16 times?
-        return self.xyz[row_ind][col_ind][0],self.xyz[row_ind][col_ind][1]
-    def get_coordinates(self,box):
-        #converts box pixle coordinates to the x,y  coordinates
-        centerX,centerY,w,h = box[0],box[1],box[2],box[3]
-        top_left = self.pixle_to_xy((centerX - (w/2) , centerY - (h/2)))
-        top_right = self.pixle_to_xy((centerX + (w/2), centerY - (h/2)))
-        bot_left = self.pixle_to_xy((centerX - (w/2) , centerY + (h/2)))
-        bot_right = self.pixle_to_xy((centerX + (w/2), centerY + (h/2)))
-        return (top_left,top_right,bot_left,bot_right)
+
+    def index_to_xy(self, hull_indexes, xyz):
+        hulls_coords = []
+        for hull in hull_indexes:
+            xy = []
+            hull = np.squeeze(hull)
+            for point in hull:
+                xy.append(self.get_xy(point, xyz))
+            hulls_coords.append(xy)
+        return hulls_coords
+    def get_xy(self, point, xyz):
+        col = point[0]
+        row = point[1]
+        return [xyz[row][col][0], xyz[row][col][1]]
+        
     def pub_predictions(self, det_boxes, det_classes):
         # Turns the raw bounding boxes and classes into a msg, and publishes it
         msg = image_points()
