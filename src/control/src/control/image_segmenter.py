@@ -23,18 +23,18 @@ class imageSegmenter:
         self.NMS = True
         self.net = cv2.dnn.readNetFromDarknet(self.config_path, self.weight_path)
         self.labels = open(self.labels_path).read().strip().split('\n')
-        self.execute = True #set this to false so node does not initially execute
+        self.execute = False #set this to false so node does not initially execute
         # All SERVICES and TOPICS MUST be created BELOW
-        self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.classify_img)
+        self.sub = rospy.Subscriber('/camera/depth/points', PointCloud2, self.classify_img_subcb)
         self.serv = rospy.Service('get_image_hulls', doService, self.get_image_hulls_srvcb)
         self.pub = rospy.Publisher('image_hulls', image_points, queue_size=1)
         self.image_pub = rospy.Publisher('arm_vision_image', Image, queue_size=1)
 
+    ######### CALLBACKS #########
     def get_image_hulls_srvcb(self, req):
         self.execute=True
         return True
-
-    def classify_img(self, ros_cloud):
+    def classify_img_subcb(self, ros_cloud):
         if not self.execute:
             return
         ros_cloud_arr = ros_numpy.point_cloud2.pointcloud2_to_array(ros_cloud)
@@ -46,12 +46,8 @@ class imageSegmenter:
         boxes, confidences, classes = self.make_prediction(self.net, self.labels,img,self.confidence,self.threshold)
         image_segments = self.make_contour_hulls(img, boxes)
         image_segments = self.index_to_xy(image_segments, xyz)
-
-        # --- turn each contour hull into a xyz coordinate ---
-        # publish that list of convex hulls (same size/indexing as boxes)
-        #self.pub_predictions(self.boxes,self.classes)
-    
-        self.execute = True #this must be false
+        self.pub_predictions(image_segments,classes)
+        self.execute = False #this must be false
         print("Finished making image segmentations")
 
     def make_prediction(self, net, labels, image, confidence, threshold):
@@ -130,11 +126,11 @@ class imageSegmenter:
             hull[:,:,1] += top_left_row
             
             hulls.append(hull)
-            
-        #draw the contours and publish the image
+        
+        #REMOVE THE DRAWING CODE BELOW, IT IS ONLY FOR DEVELOPMENT
         hullsss = np.concatenate(np.array(hulls))
         image_cropped = cv2.UMat(img)
-        cv2.drawContours(image_cropped,hullsss,-1,(0,255,0),15)
+        cv2.drawContours(image_cropped,hullsss,-1,(0,255,0),5)
         image_cropped = image_cropped.get()
         self.image_pub.publish(
             ros_numpy.image.numpy_to_image(
@@ -164,18 +160,19 @@ class imageSegmenter:
         row = point[1]
         return [xyz[row][col][0], xyz[row][col][1]]
         
-    def pub_predictions(self, det_boxes, det_classes):
+    def pub_predictions(self, image_segments, classes):
         # Turns the raw bounding boxes and classes into a msg, and publishes it
         msg = image_points()
         msg.x, msg.y, msg.obj_class = [],[],[]
         end_of_det_num = float('inf') #this should come from the param server
         end_of_det_str = ''
-        for i in range(len(det_boxes)):
-            coords = self.get_coordinates(det_boxes[i])
-            for coord in coords:
+        for i in range(len(image_segments)):
+            seg = image_segments[i]
+            seg_class = classes[i]
+            for coord in seg:
                 msg.x.append(coord[0])
                 msg.y.append(coord[1])
-            msg.obj_class.append(det_classes[i])
+            msg.obj_class.append(seg_class)
             #mark the end of detection
             msg.x.append(end_of_det_num)
             msg.y.append(end_of_det_num)
