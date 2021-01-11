@@ -26,8 +26,6 @@ class imageSegmenter:
         self.threshold = 0.3
         self.NMS = True
         self.net = cv2.dnn.readNetFromDarknet(self.config_path, self.weight_path)
-        layer_names = self.net.getLayerNames()
-        self.layer_names = [layer_names[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
         self.labels = open(self.labels_path).read().strip().split('\n')
         self.execute = True #set this to false so node does not initially execute
         # All SERVICES and TOPICS MUST be created BELOW
@@ -49,19 +47,52 @@ class imageSegmenter:
         img = np.array([rgb['r'],rgb['g'],rgb['b']]) #shape is 3,480,640
         img = np.moveaxis(img, 0, 2) #shape is 480,640,3
         self.height, self.width = img.shape[:2]
-        self.yolo(self.net,self.layer_names, self.labels,img,self.confidence,self.threshold)
-        self.execute = True #this must be false
-        print("Finished execution callback")
-
-    def yolo(self, net, layer_names, labels, img, confidence, threshold):
-        boxes, confidences, classIDs = self.make_prediction(
-            net, layer_names, labels, img, confidence,threshold)
-        classes = [labels[cid] for cid in classIDs]
+        boxes, confidences, classes = self.make_prediction(self.net, self.labels,img,self.confidence,self.threshold)
         image_segments = self.make_contour_hulls(img, boxes)
-
         # --- turn each contour hull into a xyz coordinate ---
         # publish that list of convex hulls (same size/indexing as boxes)
         #self.pub_predictions(self.boxes,self.classes)
+    
+        self.execute = True #this must be false
+        print("Finished execution callback")
+
+    def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
+        # Helper for make_predictions
+        boxes = []
+        confidences = []
+        classIDs = []
+        for output in outputs:
+            for detection in output:
+                scores = detection[5:]
+                classID = np.argmax(scores)
+                conf = scores[classID]
+                if conf > confidence:
+                    box = detection[0:4] * np.array([width, height, width, height])
+                    centerX, centerY, w, h = box.astype('int')
+                    boxes.append([centerX, centerY, w, h])
+                    confidences.append(float(conf))
+                    classIDs.append(classID)
+        return boxes, confidences, classIDs
+
+    def make_prediction(self, net, labels, image, confidence, threshold):
+        layer_names = net.getLayerNames()
+        layer_names = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+        height, width = image.shape[:2]
+        blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (416, 416), swapRB=True, crop=False)
+        net.setInput(blob)
+        outputs = net.forward(layer_names)
+        boxes, confidences, classIDs = self.extract_boxes_confidences_classids(outputs, confidence, width, height)
+        # If requested, further combine similar bounding boxes using NMS
+        if self.NMS:
+            idxs = cv2.dnn.NMSBoxes(boxes, confidences, confidence, threshold)
+            if len(idxs)>0:
+                idxs = idxs.flatten()
+                boxes = self.subset_detections(boxes, idxs)
+                confidences = self.subset_detections(confidences, idxs)
+                classIDs = self.subset_detections(classIDs, idxs)
+        classes = [labels[cid] for cid in classIDs]
+        return boxes, confidences, classes
+
     def make_contour_hulls(self, img, boxes):
         hulls = []
         for box in boxes:
@@ -153,39 +184,6 @@ class imageSegmenter:
             msg.obj_class.append(end_of_det_str)
         self.pub.publish(msg)
 
-    def extract_boxes_confidences_classids(self,outputs, confidence, width, height):
-        # Helper for make_predictions
-        boxes = []
-        confidences = []
-        classIDs = []
-        for output in outputs:
-            for detection in output:
-                scores = detection[5:]
-                classID = np.argmax(scores)
-                conf = scores[classID]
-                if conf > confidence:
-                    box = detection[0:4] * np.array([width, height, width, height])
-                    centerX, centerY, w, h = box.astype('int')
-                    boxes.append([centerX, centerY, w, h])
-                    confidences.append(float(conf))
-                    classIDs.append(classID)
-        return boxes, confidences, classIDs
-
-    def make_prediction(self, net, layer_names, labels, image, confidence, threshold):
-        height, width = image.shape[:2]
-        blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (416, 416), swapRB=True, crop=False)
-        net.setInput(blob)
-        outputs = net.forward(layer_names)
-        boxes, confidences, classIDs = self.extract_boxes_confidences_classids(outputs, confidence, width, height)
-        # If requested, further combine similar bounding boxes using NMS
-        if self.NMS:
-            idxs = cv2.dnn.NMSBoxes(boxes, confidences, confidence, threshold)
-            if len(idxs)>0:
-                idxs = idxs.flatten()
-                boxes = self.subset_detections(boxes, idxs)
-                confidences = self.subset_detections(confidences, idxs)
-                classIDs = self.subset_detections(classIDs, idxs)
-        return boxes, confidences, classIDs
 
 if __name__ == '__main__':
     rospy.init_node('image_segmenter', anonymous=True)
