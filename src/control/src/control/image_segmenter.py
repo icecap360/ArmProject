@@ -91,36 +91,28 @@ class imageSegmenter:
     def make_contour_hulls(self):
         hulls = []
         for box in self.boxes:
-            #get the corners of the box 
             centerX,centerY,w,h = box[0],box[1],box[2],box[3]
             top_left_row,top_left_col = self.pixel_to_index((centerX - (w//2) , centerY - (h//2)))
             bot_right_row, bot_right_col = self.pixel_to_index((centerX + (w//2), centerY + (h//2)))
-            #get the cropped image from the corners 
             image_cropped =  self.img[
                 top_left_row:bot_right_row,
                 top_left_col:bot_right_col, :]
-            kernel = np.ones((20,20),np.uint8)
             old_image_cropped = image_cropped.copy()
-            image_cropped = cv2.dilate(image_cropped,kernel,iterations = 1)
-            self.image_pub.publish(
-                ros_numpy.image.numpy_to_image(
-                image_cropped, "rgb8"))
-            break
-            
             
             #Binarize the image, so that the background is ignored. There are 3 ways
             #1. Specifically threshold the image to the gray background
-                #so for example is an image showed veriation in any channel away from gray, it would show. This option commented out.
-            #thresh = cv2.threshold(image_cropped, 100 ,255, cv2.THRESH_BINARY)[1] #set threshold as 100 cause dar gray is 105
-            #gray=cv2.cvtColor(thresh,cv2.COLOR_BGR2GRAY)
-            #edged=cv2.Canny(gray,30,200)
-
-            #another  options include filter small contours (smaller contours typically in background)
-            
-            #We choose the option to threshold the image after binarizing, this option is common online 
+                #so for example is an image showed veriation in any channel away from gray, it would show.
+            #2. options include filter small contours (smaller contours typically in background)
+            #3. (We choose this) threshold the image after turning it gray, this option is common online, perhaps less influenced by background color 
             gray=cv2.cvtColor(image_cropped,cv2.COLOR_BGR2GRAY)
             thresh = cv2.threshold(gray, 100 ,255, cv2.THRESH_BINARY)[1] #125 is threshold online, it did not work, so I choose 100
-            edged=cv2.Canny(thresh,30,200)
+            
+            #in thresholding anything not gray is black (so the object is typically black)
+            #dilation shrinks the black portion of an image
+            kernel = np.ones((10,10),np.uint8)
+            shrinked = cv2.dilate(thresh,kernel,iterations = 1)
+            
+            edged=cv2.Canny(shrinked,30,200)
             #Now find all the contours
             contours, hierarchy=cv2.findContours(edged,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
             #There is only one object, so all the contours have to do with one object            
@@ -128,12 +120,14 @@ class imageSegmenter:
             #Using convex hulls, alot of the interior shape is lost, so instaed a polydon was formed
             epsilon = 0.0004*cv2.arcLength(all_contours,True) # 0.001 gives 90 points, 0.005 gives 70
             hull = cv2.approxPolyDP(all_contours,epsilon,True)
-            interior_hull = self.find_points_inside(all_contours)
-            print interior_hull.shape
+            
+            #offset hull back into the orignal image
+            hull[:,:,0] += top_left_col
+            hull[:,:,1] += top_left_row
             #draw the contours and publish the image
-            image_cropped = cv2.UMat(old_image_cropped)
-            cv2.drawContours(old_image_cropped,all_contours,-1,(0,255,0),1)
-            image_cropped = old_image_cropped#.get()
+            image_cropped = cv2.UMat(self.img)
+            cv2.drawContours(image_cropped,hull,-1,(0,255,0),15)
+            image_cropped = image_cropped.get()
             
             self.image_pub.publish(
                 ros_numpy.image.numpy_to_image(
