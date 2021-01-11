@@ -44,57 +44,31 @@ class imageSegmenter:
         if not self.execute:
             return
         ros_cloud_arr = ros_numpy.point_cloud2.pointcloud2_to_array(ros_cloud)
-        self.xyz = ros_numpy.point_cloud2.get_xyz_points(ros_cloud_arr, remove_nans=False)
+        xyz = ros_numpy.point_cloud2.get_xyz_points(ros_cloud_arr, remove_nans=False)
         rgb = ros_numpy.point_cloud2.split_rgb_field(ros_cloud_arr)
         img = np.array([rgb['r'],rgb['g'],rgb['b']]) #shape is 3,480,640
         img = np.moveaxis(img, 0, 2) #shape is 480,640,3
-        self.img = img
-        self.height, self.width = self.img.shape[:2]
-        self.yolo()
+        self.height, self.width = img.shape[:2]
+        self.yolo(self.net,self.layer_names, self.labels,img,self.confidence,self.threshold)
         self.execute = True #this must be false
         print("Finished execution callback")
 
-    def yolo(self):
-        self.boxes, self.confidences, self.classIDs, display_boxes = self.make_prediction(
-            self.net, self.layer_names, self.labels, self.img, self.confidence, self.threshold)
-        self.classes = [self.labels[cid] for cid in self.classIDs]
-        self.image_segments = self.make_contour_hulls()
+    def yolo(self, net, layer_names, labels, img, confidence, threshold):
+        boxes, confidences, classIDs = self.make_prediction(
+            net, layer_names, labels, img, confidence,threshold)
+        classes = [labels[cid] for cid in classIDs]
+        image_segments = self.make_contour_hulls(img, boxes)
 
-        # --- for bounding box 
-        #   extract the image
-        #   get contours in image
-        #   get convex contour hull in image
-        #   shrink the contour hull in image
-        # return a list of convex hulls ----
         # --- turn each contour hull into a xyz coordinate ---
         # publish that list of convex hulls (same size/indexing as boxes)
-        
         #self.pub_predictions(self.boxes,self.classes)
-        ### The code below is image publishing code, it can be removed
-        #colors = np.random.randint(0, 255, size=(len(self.labels), 3), dtype='uint8')
-        #imageBounded = self.draw_bounding_boxes(self.img, display_boxes, self.confidences, self.classIDs, colors, self.labels)
-        #self.image_pub.publish(
-        #    ros_numpy.image.numpy_to_image(
-        #        imageBounded, "rgb8"))
-    def find_points_inside(self, hull, nx=25, ny=25):
-        pco = pyclipper.PyclipperOffset()
-        print np.squeeze(hull).shape
-        pco.AddPath(np.squeeze(hull), pyclipper.JT_ROUND, pyclipper.ET_CLOSEDPOLYGON)
-        shrinken_hull = pco.Execute(-20.0)
-        result = []
-        for shape in shrinken_hull:
-            for i in shape:
-                result.append(i)
-        result = np.array(result, dtype=np.int32)
-        result = np.expand_dims(result, 1)
-        return result
-    def make_contour_hulls(self):
+    def make_contour_hulls(self, img, boxes):
         hulls = []
-        for box in self.boxes:
+        for box in boxes:
             centerX,centerY,w,h = box[0],box[1],box[2],box[3]
             top_left_row,top_left_col = self.pixel_to_index((centerX - (w//2) , centerY - (h//2)))
             bot_right_row, bot_right_col = self.pixel_to_index((centerX + (w//2), centerY + (h//2)))
-            image_cropped =  self.img[
+            image_cropped =  img[
                 top_left_row:bot_right_row,
                 top_left_col:bot_right_col, :]
             old_image_cropped = image_cropped.copy()
@@ -128,10 +102,10 @@ class imageSegmenter:
             hulls.append(hull)
             
         #draw the contours and publish the image
-        hulls = np.concatenate(np.array(hulls))
-        print hulls.shape
-        image_cropped = cv2.UMat(self.img)
-        cv2.drawContours(image_cropped,hulls,-1,(0,255,0),15)
+        hullsss = np.concatenate(np.array(hulls))
+        print hullsss.shape
+        image_cropped = cv2.UMat(img)
+        cv2.drawContours(image_cropped,hullsss,-1,(0,255,0),15)
         image_cropped = image_cropped.get()
         self.image_pub.publish(
             ros_numpy.image.numpy_to_image(
@@ -184,61 +158,34 @@ class imageSegmenter:
         boxes = []
         confidences = []
         classIDs = []
-        display_boxes = []
         for output in outputs:
             for detection in output:
-                # Extract the scores, classid, and the confidence of the prediction
                 scores = detection[5:]
                 classID = np.argmax(scores)
                 conf = scores[classID]
-                # Consider only the predictions that are above the confidence threshold
                 if conf > confidence:
-                    # Scale the bounding box back to the size of the image
-                    print 'Detection: ',detection[0:4]
                     box = detection[0:4] * np.array([width, height, width, height])
                     centerX, centerY, w, h = box.astype('int')
                     boxes.append([centerX, centerY, w, h])
-                    print 'width ',width, 'height', height
-                    print 'Box: ', boxes[-1]
-                    # Use the center coordinates, width and height to get the coordinates of the top left corner
-                    x = int(centerX - (w / 2))
-                    y = int(centerY - (h / 2))
-                    display_boxes.append([x, y, int(w), int(h)])
                     confidences.append(float(conf))
                     classIDs.append(classID)
-        return boxes, confidences, classIDs, display_boxes
+        return boxes, confidences, classIDs
 
     def make_prediction(self, net, layer_names, labels, image, confidence, threshold):
         height, width = image.shape[:2]
         blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (416, 416), swapRB=True, crop=False)
         net.setInput(blob)
         outputs = net.forward(layer_names)
-        boxes, confidences, classIDs, display_boxes = self.extract_boxes_confidences_classids(outputs, confidence, width, height)
+        boxes, confidences, classIDs = self.extract_boxes_confidences_classids(outputs, confidence, width, height)
         # If requested, further combine similar bounding boxes using NMS
         if self.NMS:
             idxs = cv2.dnn.NMSBoxes(boxes, confidences, confidence, threshold)
             if len(idxs)>0:
                 idxs = idxs.flatten()
                 boxes = self.subset_detections(boxes, idxs)
-                display_boxes = self.subset_detections(display_boxes, idxs)
                 confidences = self.subset_detections(confidences, idxs)
                 classIDs = self.subset_detections(classIDs, idxs)
-        return boxes, confidences, classIDs, display_boxes
-
-    def draw_bounding_boxes(self, image, boxes, confidences, classIDs, colors, labels):
-        # In order for following cv2 to operate on an image it must UMat,
-        # but it is converted back into numpy array later on. See https://github.com/opencv/opencv/issues/14866
-        image = cv2.UMat(image)
-        for i in range(len(boxes)):
-            x, y = boxes[i][0], boxes[i][1]
-            w, h = boxes[i][2], boxes[i][3]
-            # draw the bounding box and label on the image
-            color = [int(c) for c in colors[classIDs[i]]]
-            cv2.rectangle(image, (x, y), (x + w, y + h), color, 2)
-            text = "{}: {:.4f}".format(labels[classIDs[i]], confidences[i])
-            cv2.putText(image, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-        image = image.get()
-        return image
+        return boxes, confidences, classIDs
 
 if __name__ == '__main__':
     rospy.init_node('image_segmenter', anonymous=True)
