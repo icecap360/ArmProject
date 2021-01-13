@@ -80,13 +80,18 @@ class armVision:
     # shoelace algorithm
     # requires x,y to be sorted CW or CCW
     def calc_area(self, x, y):
+        if len(x) == 0 or x[0] == None:
+            return 0
         # print(x)
         # print(y)
         return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
 
     # convex hull
     def get_hull(self, points):
+        if len(points) == 0:
+            return np.array( [[None]*2] )
         hull = cv2.convexHull(points)
+        hull = np.squeeze(hull)
         return hull
 
     # converts list of x,y into (x,y) split by inf
@@ -149,19 +154,23 @@ class armVision:
                 image_area = self.calc_area(image_points[:,0], image_points[:,1])
                 # calculate area of union
                 union_points = np.vstack((pcl_points, image_points))
+                # must sort union_points in CW or CCW order before finding hull
                 #print(union)
                 union_hull = self.get_hull(union_points)
-                union_area = self.calc_area(union_hull[:,:,0][:,0], union_hull[:,:,1][:,0])
-                # calculate intersection over union
-                # note: P(AuB) = P(A) + P(B) - P(AnB)
-                intersection_area = pcl_area + image_area - union_area
-                iou = intersection_area/union_area
+                union_area = self.calc_area(union_hull[:,0], union_hull[:,1])
+                if union_area == 0:
+                    iou = 0
+                else:
+                    #union_area = self.calc_area(union_hull[:,:,0][:,0], union_hull[:,:,1][:,0])
+                    # calculate intersection over union
+                    # note: P(AuB) = P(A) + P(B) - P(AnB)
+                    intersection_area = pcl_area + image_area - union_area
+                    iou = intersection_area/union_area
                 print("image area: ", image_area)
                 print("union area: ", union_area)
                 print("intersection area: ", intersection_area)
                 print("iou: ", iou)
-                break
-            break
+
 
 
     """ subscriber callbacks """
