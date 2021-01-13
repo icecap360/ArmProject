@@ -13,6 +13,7 @@ from control.msg import (
 )
 import numpy as np
 import cv2
+import munkres
 
 class armVision:
     def __init__(self):
@@ -39,6 +40,7 @@ class armVision:
         self.cluster_points = cluster_points()
         self.image_segment_complete = False
         self.image_hulls = image_points()
+        self.cluster_center = [0]
 
     def get_x(self):
         return self.x
@@ -108,7 +110,41 @@ class armVision:
         clusters = np.size(x) - np.size(indices)
         return coord, clusters
 
+    # comparator callback for clockwise sorting
+    # return -1 -> a before b
+    #         1 -> a after b
+    #         0 -> equal preference
+    def cw_cmp(self, a, b):
+        center = self.center
+        # simple cases
+        if (a[0] - center[0]) >= 0 and (b[0] - center[0]) < 0:
+            return 1
+        if (a[0] - center[0]) < 0 and (b[0] - center[0]) >= 0:
+            return -1
+        if (a[0] - center[0]) == 0 and (b[0] - center[0]) == 0:
+            if (a[1] - center[1]) >= 0 and (b[1] - center[1]) >= 0:
+                return a[1] > b[1]
+            return b[1] > a[1]
+        # cross product to find theta angle in polar coordinates
+        det = ( (a[0] - center[0]) * (b[1] - center[1]) ) - ( (b[0] - center[0]) * (a[1] - center[1]) )
+        if det < 0:
+            return 1
+        if det > 0:
+            return -1
+        # points lie on same line, therefore sort by distance
+        d1 = ( (a[0] - center[0]) * (a[0] - center[0]) ) - ( (a[1] - center[1]) * (a[1] - center[1]) )
+        d2 = ( (b[0] - center[0]) * (b[0] - center[0]) ) - ( (b[1] - center[1]) * (b[1] - center[1]) )
+        return int(d1 > d2)
+
+    # returns list sorted in clockwise order
+    def sort_cw(self, points):
+        self.center = points.mean(0)
+        points = sorted(points, cmp=self.cw_cmp)
+        return np.float32(points)
+
+    # processes pcl and image clusters and combines them
     def create_objects(self, pcl_hulls, image_hulls):
+        # algorithm:
         # get points of coordinates
         # restructure into x by y by cluster array
         # calc_area of each cluster
@@ -121,55 +157,66 @@ class armVision:
         #   pcl_0 [image_0 image_1 ...]
         #   pcl_1 [image_0 image_1 ...]
 
-        # x = np.array([-0.4537625014781952, -0.4537625014781952, 0.1694825291633606, 0.1554984748363495, float('inf'),
-        #     -0.5331484079360962, -1.595348834991455, 0.13693620264530182, 0.14588412642478943, float('inf')])
-        # y = np.array([-0.28957805037498474, -0.09833024442195892, -0.27066612243652344, -0.08432504534721375, float('inf'),
-        #     -0.04781195521354675, 0.6019675135612488, -0.04100349545478821, 0.18379750847816467, float('inf')])
-
+        # convert raw messages into coordinates of (x,y) array
         pcl_coord, pcl_num_clusters = self.convert_to_coordinates(pcl_hulls.hull_x, pcl_hulls.hull_y)
         image_coord, image_num_clusters = self.convert_to_coordinates(image_hulls.x, image_hulls.y)
-
-        #print(image_coord[0])
-        temp = np.float32(pcl_coord[0])
-        image_hull = self.get_hull(temp)
-        #print(temp[:,0])
-        #print(self.calc_area(temp[:,0], temp[:,1]) )
-        #print(self.calc_area(image_hull[:,:,0][:,0], image_hull[:,:,1][:,0]) )
-        #print(image_hull[:,:,1][:,0])
 
         # construct matrix for munkres algorithm
         # columns -> image_clusters
         # rows -> pcl_clusters
         # cost -> intersection over union
-        cost = [[None]*image_num_clusters] * pcl_num_clusters
+        cost = [[None]*image_num_clusters for i in range(pcl_num_clusters) ]
         # for each pcl cluster
         for i in range(0, pcl_num_clusters):
             # convert to cv2 point type
-            pcl_points = np.float32(pcl_coord[i])
+            # note: empty array between each cluster
+            pcl_points = np.float32(pcl_coord[i*2])
             # calculate area of pcl cluster
             pcl_area = self.calc_area(pcl_points[:,0], pcl_points[:,1])
-            print("pcl area: ", pcl_area)
+            # print("pcl area: ", pcl_area, " num points: ", len(pcl_points) )
             for j in range(0, image_num_clusters):
-                image_points = np.float32(image_coord[j])
+                image_points = np.float32(image_coord[j*2])
                 image_area = self.calc_area(image_points[:,0], image_points[:,1])
+
                 # calculate area of union
                 union_points = np.vstack((pcl_points, image_points))
+                # testing code
+                # union_hull = self.get_hull(union_points)
+                # union_area = self.calc_area(union_hull[:,0], union_hull[:,1])
+                # print("union area before sort: ", union_area)
                 # must sort union_points in CW or CCW order before finding hull
-                #print(union)
+                union_points = self.sort_cw(union_points)
                 union_hull = self.get_hull(union_points)
                 union_area = self.calc_area(union_hull[:,0], union_hull[:,1])
+                # calculate intersection over union
                 if union_area == 0:
                     iou = 0
                 else:
-                    #union_area = self.calc_area(union_hull[:,:,0][:,0], union_hull[:,:,1][:,0])
                     # calculate intersection over union
                     # note: P(AuB) = P(A) + P(B) - P(AnB)
                     intersection_area = pcl_area + image_area - union_area
                     iou = intersection_area/union_area
-                print("image area: ", image_area)
-                print("union area: ", union_area)
-                print("intersection area: ", intersection_area)
-                print("iou: ", iou)
+                # print("image area: ", image_area, " num points: ", len(image_points) )
+                # print("union area: ", union_area, " num points: ", len(union_points))
+                # print("intersection area: ", intersection_area)
+                # print("iou: ", iou)
+                # add iou into cost matrix
+                cost[i][j] = iou
+        # find lowest cost solution
+        munk = munkres.Munkres()
+        # indices is list of tuples of (i,j)
+        indices = munk.compute(cost)
+        #print("cost matrix: ", cost, "indices: ", indices)
+
+        # create final objects
+        obj_list = self.get_object_list()
+        for i in range(len(indices)):
+            obj = object(
+                pcl_hulls.centroid_x[i*2], pcl_hulls.centroid_y[i*2], image_hulls.obj_class[i*2])
+            obj_list.append(obj)
+            print("object added: ", obj.get_x(), obj.get_y(), obj.get_obj_class() )
+        self.set_object_list(obj_list)
+        self.set_object_list_empty(False)
 
 
 
@@ -194,12 +241,12 @@ class armVision:
 
     def locate_all_objects(self, req):
     	print('Searching field for what objects are present and where in the field')
-        obj_list = self.get_object_list()
-        obj = object(5,5,"foo")
-        obj_list.append(obj)
-        obj_list.append(obj)
-        self.set_object_list(obj_list)
-        self.set_object_list_empty(False)
+        # obj_list = self.get_object_list()
+        # obj = object(5,5,"foo")
+        # obj_list.append(obj)
+        # obj_list.append(obj)
+        # self.set_object_list(obj_list)
+        # self.set_object_list_empty(False)
 
         # start timer for segmentation limit time
         time = rospy.get_time()
