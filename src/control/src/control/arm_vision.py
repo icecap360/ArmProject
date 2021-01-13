@@ -12,6 +12,7 @@ from control.msg import (
     image_points
 )
 import numpy as np
+import cv2
 
 class armVision:
     def __init__(self):
@@ -79,11 +80,13 @@ class armVision:
     # shoelace algorithm
     # requires x,y to be sorted CW or CCW
     def calc_area(self, x, y):
+        # print(x)
+        # print(y)
         return 0.5*np.abs(np.dot(x,np.roll(y,1))-np.dot(y,np.roll(x,1)))
 
     # convex hull
     def get_hull(self, points):
-        hull = cv.convexHull(points)
+        hull = cv2.convexHull(points)
         return hull
 
     # converts list of x,y into (x,y) split by inf
@@ -95,7 +98,7 @@ class armVision:
         coord = np.array_split(coord[indices][:], np.where(coord==float('inf') ) [0][:])
         # returns array of arrays of different length
         # each subarray represents one cluster
-        #print((np.size(coord)))
+        #print(coord[0])
         # get number of clusters
         clusters = np.size(x) - np.size(indices)
         return coord, clusters
@@ -110,17 +113,55 @@ class armVision:
         #   find area of new cluster (union)
         #   find intersection / union
         # munkres algorithm to find min cost solution
+        #   pcl_0 [image_0 image_1 ...]
+        #   pcl_1 [image_0 image_1 ...]
 
         # x = np.array([-0.4537625014781952, -0.4537625014781952, 0.1694825291633606, 0.1554984748363495, float('inf'),
         #     -0.5331484079360962, -1.595348834991455, 0.13693620264530182, 0.14588412642478943, float('inf')])
         # y = np.array([-0.28957805037498474, -0.09833024442195892, -0.27066612243652344, -0.08432504534721375, float('inf'),
         #     -0.04781195521354675, 0.6019675135612488, -0.04100349545478821, 0.18379750847816467, float('inf')])
 
-        pcl_coord, pcl_clusters = self.convert_to_coordinates(pcl_hulls.hull_x, pcl_hulls.hull_y)
-        image_coord, image_clusters = self.convert_to_coordinates(image_hulls.x, image_hulls.y)
+        pcl_coord, pcl_num_clusters = self.convert_to_coordinates(pcl_hulls.hull_x, pcl_hulls.hull_y)
+        image_coord, image_num_clusters = self.convert_to_coordinates(image_hulls.x, image_hulls.y)
 
+        #print(image_coord[0])
+        temp = np.float32(pcl_coord[0])
+        image_hull = self.get_hull(temp)
+        #print(temp[:,0])
+        #print(self.calc_area(temp[:,0], temp[:,1]) )
+        #print(self.calc_area(image_hull[:,:,0][:,0], image_hull[:,:,1][:,0]) )
+        #print(image_hull[:,:,1][:,0])
 
-
+        # construct matrix for munkres algorithm
+        # columns -> image_clusters
+        # rows -> pcl_clusters
+        # cost -> intersection over union
+        cost = [[None]*image_num_clusters] * pcl_num_clusters
+        # for each pcl cluster
+        for i in range(0, pcl_num_clusters):
+            # convert to cv2 point type
+            pcl_points = np.float32(pcl_coord[i])
+            # calculate area of pcl cluster
+            pcl_area = self.calc_area(pcl_points[:,0], pcl_points[:,1])
+            print("pcl area: ", pcl_area)
+            for j in range(0, image_num_clusters):
+                image_points = np.float32(image_coord[j])
+                image_area = self.calc_area(image_points[:,0], image_points[:,1])
+                # calculate area of union
+                union_points = np.vstack((pcl_points, image_points))
+                #print(union)
+                union_hull = self.get_hull(union_points)
+                union_area = self.calc_area(union_hull[:,:,0][:,0], union_hull[:,:,1][:,0])
+                # calculate intersection over union
+                # note: P(AuB) = P(A) + P(B) - P(AnB)
+                intersection_area = pcl_area + image_area - union_area
+                iou = intersection_area/union_area
+                print("image area: ", image_area)
+                print("union area: ", union_area)
+                print("intersection area: ", intersection_area)
+                print("iou: ", iou)
+                break
+            break
 
 
     """ subscriber callbacks """
