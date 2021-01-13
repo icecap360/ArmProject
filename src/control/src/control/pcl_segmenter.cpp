@@ -28,6 +28,11 @@
 
 // global definitions
 uint32_t queue_size = 1;
+const float DOWNSAMPLE_SIZE = 0.01;
+const float PLANE_TOLERANCE = 0.02;
+const float CLUSTER_TOLERANCE = 0.07;
+const float HULL_ALPHA = 0.01;
+
 class pclSegmenter;
 
 class pclSegmenter{
@@ -105,7 +110,7 @@ void pclSegmenter::pcl_subcb(const boost::shared_ptr<const sensor_msgs::PointClo
   std::cout<<"temp_cloud has: "<< temp_cloud->size() <<" size ";
 
 	// segment into clusters and publish concave hull points
-	segment_and_publish(temp_cloud, 0.01f, 0.02, 0.03, 0.01);
+	segment_and_publish(temp_cloud, DOWNSAMPLE_SIZE, PLANE_TOLERANCE, CLUSTER_TOLERANCE, HULL_ALPHA);
 	// stop publishing until service called again
   go_segment_and_publish = false;
 
