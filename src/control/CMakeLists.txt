@@ -71,7 +71,7 @@ add_service_files(
  doService.srv
  isTaskEmpty.srv
  isObjectPicked.srv
- # segmentComplete.srv
+ segmentComplete.srv
 )
 
 ## Generate actions in the 'action' folder
