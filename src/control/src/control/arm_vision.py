@@ -17,6 +17,11 @@ import munkres
 
 class armVision:
     def __init__(self):
+        rospy.wait_for_service('get_pcl_hulls')
+        self.get_pcl_hulls = rospy.ServiceProxy('get_pcl_hulls', doService)
+        rospy.wait_for_service('get_image_hulls')
+        self.get_image_hulls = rospy.ServiceProxy('get_image_hulls', doService)
+
         self.object_lateral_pub = rospy.Publisher('object_lateral', object_lateral, queue_size=10)
         self.cloud_hull_sub = rospy.Subscriber('cloud_hulls', cluster_points, self.pcl_segment_complete_subcb)
         self.image_hull_sub = rospy.Subscriber('image_hulls', image_points, self.image_segment_complete_subcb)
@@ -26,10 +31,6 @@ class armVision:
         self.is_empty_serv = rospy.Service('is_task_empty', isTaskEmpty, self.is_task_empty)
         # self.pcl_segment_complete_serv = rospy.Service('pcl_segment_complete', segmentComplete, self.pcl_segment_complete)
 
-        rospy.wait_for_service('get_pcl_hulls')
-        self.get_pcl_hulls = rospy.ServiceProxy('get_pcl_hulls', doService)
-        rospy.wait_for_service('get_image_hulls')
-        self.get_image_hulls = rospy.ServiceProxy('get_image_hulls', doService)
 
         self.object_list = []
         self.object_list_empty = True
